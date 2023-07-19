@@ -1,0 +1,43 @@
+[tool.poetry]
+name = "gemcausal"
+version = "0.1.0"
+description = "Generator or Encoder Model for Causal tasks"
+authors = ["Masahiro Suzuki <msuzuki9609@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+transformers = "^4.30.2"
+openai = "^0.27.8"
+datasets = "^2.13.1"
+tenacity = "^8.2.2"
+tqdm = "^4.65.0"
+evaluate = "^0.4.0"
+scikit-learn = "^1.3.0"
+numpy = "^1.25.1"
+torch = "^2.0.1+cu117"
+accelerate = "^0.21.0"
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.7.0"
+isort = "^5.12.0"
+pytest = "^7.4.0"
+pytest-codecov = "^0.5.1"
+
+[[tool.poetry.source]]
+name = "torch_cu117"
+url = "https://download.pytorch.org/whl/cu117"
+priority = "primary"
+
+[[tool.poetry.source]]
+name = "torch_cpu"
+url = "https://download.pytorch.org/whl/cpu"
+priority = "explicit"
+
+[tool.coverage.report]
+exclude_lines = ["pragma: no cover", "if __name__ == .__main__.:"]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

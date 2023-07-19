@@ -1,0 +1,7 @@
+{
+    "task_description": "1. Determine if the text displays causal meanings. If it does, label it as N1 and stop.\n2. If the text does not, label it as N0 and stop.\n\n",
+    "header_example": "Annotation Examples:\n",
+    "format_text": "Text: {}\n",
+    "format_class": "Classification: N{}\n\n",
+    "question": "According to the policy above, should the following text be classified as N1 or N0?\n"
+}
