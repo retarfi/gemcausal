@@ -16,9 +16,21 @@ THIS_DIR: str = os.path.dirname(os.path.abspath(__file__))
 @pytest.mark.parametrize(
     "task_name, dataset_name, test_samples, num_total, num_test, expectation",
     [
+        ("SEQUENCE_CLASSIFICATION", "AltLex", None, 978, 401, does_not_raise()),
+        ("SPAN_DETECTION", "AltLex", None, 376, 100, does_not_raise()),
+        ("SEQUENCE_CLASSIFICATION", "CTB", None, 2201, 316, does_not_raise()),
+        ("SEQUENCE_CLASSIFICATION", "ESL", None, 2232, 232, does_not_raise()),
         ("SEQUENCE_CLASSIFICATION", "PDTB", None, 42850, 8083, does_not_raise()),
-        ("SEQUENCE_CLASSIFICATION", "PDTB", 1000, 35767, 1000, does_not_raise()),
+        (
+            "SEQUENCE_CLASSIFICATION",
+            "PDTB",
+            1000,
+            35767,
+            1000,
+            does_not_raise(),
+        ),  # limit dataset
         ("SPAN_DETECTION", "PDTB", None, 7294, 1300, does_not_raise()),
+        ("SEQUENCE_CLASSIFICATION", "SemEval", None, 10690, 2715, does_not_raise()),
         (
             "CHAIN_CONSTRUCTION",
             "PDTB",

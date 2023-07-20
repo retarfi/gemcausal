@@ -1,4 +1,5 @@
 # gemcausal
+
 Generator or Encoder Model for Causal tasks
 
 <p align="center">
@@ -11,9 +12,10 @@ Generator or Encoder Model for Causal tasks
   </a>
 </p>
 
-
 ## Quick Start
+
 ### Installation
+
 ```sh
 poetry lock
 poetry install
@@ -21,12 +23,14 @@ poetry add torch --source torch_cu117
 ```
 
 ### Run Evaluation
+
 When using OpenAI API:
+
 ```sh
 OPENAI_API_KEY=XXX poetry run python src/main.py \
 openai \
 --task_type <SEQUENCE_CLASSIFICATION|SPAN_DETECTION> \
---dataset_type PDTB \
+--dataset_type <AltLex|CTB|ESL|SemEval|PDTB> \
 --data_dir data/ \
 --test_samples 200 \
 --model gpt-3.5-turbo \
@@ -36,11 +40,12 @@ openai \
 ```
 
 When using a HuggingFace encoder model:
+
 ```sh
 poetry run python src/main.py \
 hf-encoder \
 --task_type <SEQUENCE_CLASSIFICATION|SPAN_DETECTION> \
---dataset_type PDTB \
+--dataset_type <AltLex|CTB|ESL|SemEval|PDTB> \
 --data_dir data/ \
 --test_samples 200 \
 --model_name google/bert_uncased_L-2_H-128_A-2 \
@@ -50,16 +55,24 @@ hf-encoder \
 ```
 
 ## Data Preprocessing
+
 ### UniCausal
+
 Please download processed data from [Unicausal data](https://github.com/tanfiona/UniCausal/tree/main/data/splits) (for AltLex) or process with [UniCausal Jupyter files](https://github.com/tanfiona/UniCausal/tree/main/processing) by yourself, and save downloaded or processed csv files into `./data/`.
 
 ## Number of Examples
+
 The number of samples of dev set is as same as that of test set .
 
-| Corpus | Split | Sequence Classification | Span Detection |
-| ---- | ---- | ---- | ---- |
-| PDTB | All | 42850 | 7294 |
-|  | Test | 8083 | 1300 |
-
-
-
+| Corpus  | Split | Sequence Classification | Span Detection |
+| :-----: | :---: | :---------------------: | :------------: |
+| AltLex  | All   | 978                     | 376            |
+|         | Test  | 401                     | 100            |
+| CTB     | All   | 2201                    | -              |
+|         | Test  | 316                     | -              |
+| ESL     | All   | 2232                    | -              |
+|         | Test  | 232                     | -              |
+| PDTB    | All   | 42850                   | 7294           |
+|         | Test  | 8083                    | 1300           |
+| SemEval | All   | 10690                   | -              |
+|         | Test  | 2715                    | -              |
