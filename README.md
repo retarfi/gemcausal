@@ -7,7 +7,7 @@ Generator or Encoder Model for Causal tasks
     <img alt="Test" src="https://github.com/retarfi/gemcausal/actions/workflows/format.yml/badge.svg">
   </a>
   <a href="https://codecov.io/gh/retarfi/gemcausal">
-    <img alt="codecov" src="https://codecov.io/gh/retarfi/gemcausal/branch/main/graph/badge.svg?token=JR2JR5L653">
+    <img alt="codecov" src="https://codecov.io/gh/retarfi/gemcausal/branch/main/graph/badge.svg?token=S3C8W7KKDE">
   </a>
 </p>
 
