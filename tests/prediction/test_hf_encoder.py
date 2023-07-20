@@ -10,7 +10,8 @@ THIS_DIR: str = os.path.dirname(os.path.abspath(__file__))
 
 
 @pytest.mark.parametrize(
-    "task_type, dataset_type", [("SEQUENCE_CLASSIFICATION", "PDTB")]
+    "task_type, dataset_type",
+    [("SEQUENCE_CLASSIFICATION", "PDTB"), ("SPAN_DETECTION", "PDTB")],
 )
 def test_predict(task_type: str, dataset_type: str) -> None:
     parser = argparse.ArgumentParser()
