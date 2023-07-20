@@ -82,7 +82,10 @@ def load_data(
             ds_test = ds_test.select(list(range(test_samples)))
         else:
             logger.warning(
-                f"Test sampling is not executed because test_samples > number of test samples ({len(ds_test)})"
+                (
+                    "Test sampling is not executed because test_samples > number of "
+                    f"test samples ({len(ds_test)})"
+                )
             )
     dsd: DatasetDict = DatasetDict(
         {"train": ds_train, "valid": ds_valid, "test": ds_test}
