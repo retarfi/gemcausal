@@ -21,11 +21,32 @@ poetry add torch --source torch_cu117
 ```
 
 ### Run Evaluation
+When using OpenAI API:
 ```sh
-poetry run python main.py \
-<openai|hf-encoder> \
---task_type <sequence-classification|span-detection> \
+OPENAI_API_KEY=XXX poetry run python src/main.py \
+openai \
+--task_type <SEQUENCE_CLASSIFICATION|SPAN_DETECTION> \
 --dataset_type PDTB \
+--data_dir data/ \
+--test_samples 200 \
+--model gpt-3.5-turbo \
+--template tempalte/openai_sequence.json \
+--shot 2 \
+--output_dir materials/result/
+```
+
+When using a HuggingFace encoder model:
+```sh
+poetry run python src/main.py \
+hf-encoder \
+--task_type <SEQUENCE_CLASSIFICATION|SPAN_DETECTION> \
+--dataset_type PDTB \
+--data_dir data/ \
+--test_samples 200 \
+--model_name google/bert_uncased_L-2_H-128_A-2 \
+--train_batch_size 32 \
+--eval_batch_size 2 \
+--max_epochs 10
 ```
 
 ## Data Preprocessing

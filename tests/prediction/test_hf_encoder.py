@@ -6,7 +6,7 @@ import pytest
 from src.argument import add_argument_common, add_argument_hf_encoder
 from src.prediction.hf_encoder import predict
 
-os.chdir(os.path.dirname(os.path.abspath(__file__)))
+THIS_DIR: str = os.path.dirname(os.path.abspath(__file__))
 
 
 @pytest.mark.parametrize(
@@ -24,7 +24,7 @@ def test_predict(task_type: str, dataset_type: str) -> None:
             "--dataset_type",
             dataset_type,
             "--data_dir",
-            "../../data",
+            os.path.join(THIS_DIR, "../../data"),
             "--test_samples",
             "5",
             "--model_name",

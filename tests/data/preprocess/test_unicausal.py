@@ -39,10 +39,7 @@ def test_get_bio(text: str, tokens: list[str], tags: list[str]) -> None:
 
 def test_get_bio_for_datasets() -> None:
     text: str = "<ARG0>This pencil</ARG0> makes me <ARG1>very mad</ARG1>."
-    dct_input: dict[str, str] = {
-        "text_w_pairs": text,
-        "text": "test",
-    }
+    dct_input: dict[str, str] = {"text_w_pairs": text, "text": "test"}
     dct_expected: dict[str, str] = {
         **dct_input,
         **{

@@ -10,36 +10,15 @@ from datasets import DatasetDict
 from src.data.load_data import load_data
 from src import TaskType, DatasetType
 
-os.chdir(os.path.dirname(os.path.abspath(__file__)))
+THIS_DIR: str = os.path.dirname(os.path.abspath(__file__))
 
 
 @pytest.mark.parametrize(
     "task_name, dataset_name, test_samples, num_total, num_test, expectation",
     [
-        (
-            "SEQUENCE_CLASSIFICATION",
-            "PDTB",
-            None,
-            42850,
-            8083,
-            does_not_raise(),
-        ),
-        (
-            "SEQUENCE_CLASSIFICATION",
-            "PDTB",
-            1000,
-            35767,
-            1000,
-            does_not_raise(),
-        ),
-        (
-            "SPAN_DETECTION",
-            "PDTB",
-            None,
-            7294,
-            1300,
-            does_not_raise(),
-        ),
+        ("SEQUENCE_CLASSIFICATION", "PDTB", None, 42850, 8083, does_not_raise()),
+        ("SEQUENCE_CLASSIFICATION", "PDTB", 1000, 35767, 1000, does_not_raise()),
+        ("SPAN_DETECTION", "PDTB", None, 7294, 1300, does_not_raise()),
         (
             "CHAIN_CONSTRUCTION",
             "PDTB",
@@ -62,7 +41,7 @@ def test_load_data(
         dsd: DatasetDict = load_data(
             task_enum=TaskType[task_name],
             dataset_enum=DatasetType[dataset_name],
-            data_dir="../../data",
+            data_dir=os.path.join(THIS_DIR, "../../data"),
             test_samples=test_samples,
         )
         assert isinstance(dsd, DatasetDict)

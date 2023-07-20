@@ -85,11 +85,7 @@ def load_data(
                 f"Test sampling is not executed because test_samples > number of test samples ({len(ds_test)})"
             )
     dsd: DatasetDict = DatasetDict(
-        {
-            "train": ds_train,
-            "valid": ds_valid,
-            "test": ds_test,
-        }
+        {"train": ds_train, "valid": ds_valid, "test": ds_test}
     )
     # drop and assert columns
     for key, ds_ in dsd.items():

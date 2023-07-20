@@ -11,7 +11,7 @@ from src.prediction.openai import (
     read_template,
 )
 
-os.chdir(os.path.dirname(os.path.abspath(__file__)))
+THIS_DIR: str = os.path.dirname(os.path.abspath(__file__))
 
 
 def test_api_key_validation() -> None:
@@ -19,7 +19,7 @@ def test_api_key_validation() -> None:
 
 
 def test_read_template() -> None:
-    read_template("../../template/openai_sequence.json")
+    read_template(os.path.join(THIS_DIR, "../../template/openai_sequence.json"))
 
 
 def test_completion_with_backoff() -> None:
@@ -46,17 +46,17 @@ def test_predict(task_type: str, dataset_type: str, json_file: str) -> None:
             "--dataset_type",
             dataset_type,
             "--data_dir",
-            "../../data",
+            os.path.join(THIS_DIR, "../../data"),
             "--test_samples",
             "5",
             "--model",
             "gpt-3.5-turbo",
             "--template",
-            os.path.join("../../template", json_file),
+            os.path.join(THIS_DIR, "../../template", json_file),
             "--shot",
             "1",
             "--output_dir",
-            "../materials/results",
+            os.path.join(THIS_DIR, "../materials/results"),
         ]
     )
     predict(args)
