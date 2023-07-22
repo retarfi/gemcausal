@@ -2,11 +2,11 @@ import itertools
 from argparse import Namespace
 from typing import Any, Optional
 
-import evaluate
 import numpy as np
 import torch
 import transformers
 from datasets import DatasetDict
+from evaluate import CombinedEvaluations
 from transformers import (
     AutoConfig,
     AutoTokenizer,
@@ -17,6 +17,7 @@ from transformers import (
     TrainingArguments,
 )
 
+from .metrics import load_metrics
 from .. import DatasetType, TaskType, assert_dataset_task_pair, logger
 from ..data.load_data import load_data
 from ..data.reco import preprocess_reco_for_chain_classification
@@ -142,8 +143,6 @@ def predict(args: Namespace) -> None:
     eval_batch_size: int = args.eval_batch_size
     max_epochs: int = args.max_epochs
 
-    metrics_name: str = "f1"
-
     assert_dataset_task_pair(
         dataset_enum=DatasetType[dataset_type], task_enum=TaskType[task_type]
     )
@@ -170,7 +169,8 @@ def predict(args: Namespace) -> None:
         raise NotImplementedError()
 
     lst_grid_results: list[dict[str, float]] = []
-    metric = evaluate.load(metrics_name)
+    lst_metrics: list[str] = ["f1", "precision", "recall", "accuracy"]
+    metrics: CombinedEvaluations = load_metrics(lst_metrics)
     for lr in lst_lr:
         training_args: TrainingArguments = TrainingArguments(
             output_dir="./materials/",
@@ -190,6 +190,7 @@ def predict(args: Namespace) -> None:
             data_seed=seed,
         )
         model: PreTrainedModel
+        metric_average: str
         if TaskType[task_type] in (
             TaskType.sequence_classification,
             TaskType.chain_classification,
@@ -197,42 +198,29 @@ def predict(args: Namespace) -> None:
             model = transformers.AutoModelForSequenceClassification.from_pretrained(
                 model_name
             )
-
-            def compute_metrics(p: transformers.EvalPrediction):
-                preds = (
-                    p.predictions[0]
-                    if isinstance(p.predictions, tuple)
-                    else p.predictions
-                )
-                preds = np.argmax(preds, axis=1)
-                result = metric.compute(predictions=preds, references=p.label_ids)
-                if len(result) > 1:
-                    result["combined_score"] = np.mean(list(result.values())).item()
-                return result
-
+            metric_average = "binary"
         elif TaskType[task_type] == TaskType.span_detection:
             model = transformers.AutoModelForTokenClassification.from_pretrained(
                 model_name, config=config
             )
-
-            def compute_metrics(p: transformers.EvalPrediction):
-                preds = (
-                    p.predictions[0]
-                    if isinstance(p.predictions, tuple)
-                    else p.predictions
-                )
-                preds = np.argmax(preds, axis=-1)
-                result = metric.compute(
-                    predictions=preds[p.label_ids != -100].ravel(),
-                    references=p.label_ids[p.label_ids != -100].ravel(),
-                    average="macro",
-                )
-                if len(result) > 1:
-                    result["combined_score"] = np.mean(list(result.values())).item()
-                return result
-
+            metric_average = "macro"
         else:  # pragma: no cover
             raise NotImplementedError()
+
+        def compute_metrics(p: transformers.EvalPrediction) -> dict[str, float]:
+            preds = (
+                p.predictions[0] if isinstance(p.predictions, tuple) else p.predictions
+            )
+            preds = np.argmax(preds, axis=-1)
+            if TaskType[task_type] == TaskType.span_detection:
+                preds = preds[p.label_ids != -100].ravel()
+                label_ids = p.label_ids[p.label_ids != -100].ravel()
+            else:
+                label_ids = p.label_ids
+            result = metrics.compute(
+                predictions=preds, references=label_ids, average=metric_average
+            )
+            return result
 
         trainer: Trainer = Trainer(
             model=model,
@@ -247,7 +235,11 @@ def predict(args: Namespace) -> None:
         lst_epochs_result: list[dict[str, float]] = list(
             filter(
                 lambda d: len(
-                    {f"eval_valid_{metrics_name}", f"eval_test_{metrics_name}"}
+                    {
+                        f"eval_{mode}_{met}"
+                        for met in lst_metrics
+                        for mode in ("valid", "test")
+                    }
                     & set(d.keys())
                 )
                 > 0,
@@ -261,18 +253,18 @@ def predict(args: Namespace) -> None:
                 d_tmp.update(d)
             lst_tmp.append(d_tmp)
         dct_result: dict[str, float] = max(
-            enumerate(lst_tmp), key=lambda x: x[1][f"eval_valid_{metrics_name}"]
+            enumerate(lst_tmp), key=lambda x: x[1][f"eval_valid_{lst_metrics[0]}"]
         )[1]
         lst_grid_results.append(dct_result)
 
     best_result: dict[str, float] = sorted(
-        lst_grid_results, key=lambda x: x[f"eval_valid_{metrics_name}"], reverse=True
+        lst_grid_results, key=lambda x: x[f"eval_valid_{lst_metrics[0]}"], reverse=True
     )[0]
     best_result = dict(
         [
             (k.replace("eval_valid_", "valid_").replace("eval_test_", "test_"), v)
             for k, v in best_result.items()
-            if f"_{metrics_name}" in k or k == "epoch"
+            if any(map(lambda x: f"_{x}" in k, lst_metrics)) or k == "epoch"
         ]
     )
     logger.info("Best result: %s", best_result)
