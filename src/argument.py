@@ -5,12 +5,15 @@ from . import DatasetType, TaskType
 
 def add_argument_common(parser: ArgumentParser) -> None:
     parser.add_argument(
-        "--task_type", choices=[x.name for x in TaskType], required=True
+        "--task_type", choices=[x.name for x in TaskType], required=True, type=str.lower
     )
     parser.add_argument(
-        "--dataset_type", choices=[x.name for x in DatasetType], required=True
+        "--dataset_type",
+        choices=[x.name for x in DatasetType],
+        required=True,
+        type=str.lower,
     )
-    parser.add_argument("--data_dir", required=True)
+    parser.add_argument("--data_dir", required=True, default="data/")
     parser.add_argument(
         "--test_samples",
         type=int,

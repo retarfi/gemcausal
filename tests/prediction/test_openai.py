@@ -32,7 +32,7 @@ def test_completion_with_backoff() -> None:
 
 @pytest.mark.parametrize(
     "task_type, dataset_type, json_file",
-    [("SEQUENCE_CLASSIFICATION", "PDTB", "openai_sequence.json")],
+    [("sequence_classification", "pdtb", "openai_sequence.json")],
 )
 def test_predict(task_type: str, dataset_type: str, json_file: str) -> None:
     parser = argparse.ArgumentParser()

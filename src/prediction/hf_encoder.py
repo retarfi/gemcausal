@@ -17,8 +17,116 @@ from transformers import (
     TrainingArguments,
 )
 
-from .. import DatasetType, TaskType, logger
+from .. import DatasetType, TaskType, assert_dataset_task_pair, logger
 from ..data.load_data import load_data
+from ..data.reco import preprocess_reco_for_chain_classification
+
+
+def preprocess_for_sequence_classification(
+    dsd: DatasetDict, tokenizer: PreTrainedTokenizer, model_name: str
+) -> tuple[DatasetDict, PretrainedConfig]:
+    max_length: int = max(map(lambda x: len(tokenizer.encode(x)), dsd["train"]["text"]))
+    config: PretrainedConfig = AutoConfig.from_pretrained(model_name)
+    if max_length > config.max_position_embeddings:
+        logger.warning(
+            (
+                "Although length of train datasets is %s, "
+                "that of the model is %s so we set max length as %s"
+            ),
+            max_length,
+            config.max_position_embeddings,
+            config.max_position_embeddings,
+        )
+        max_length = config.max_position_embeddings
+    dsd = dsd.map(
+        lambda example: tokenizer(
+            example["text"],
+            max_length=max_length,
+            padding="max_length",
+            truncation=True,
+        )
+    )
+    return dsd, config
+
+
+def preprocess_for_span_detection(
+    dsd: DatasetDict, tokenizer: PreTrainedTokenizer, model_name: str
+) -> tuple[DatasetDict, PretrainedConfig]:
+    label_list: list[str] = list(
+        set(itertools.chain.from_iterable(dsd["train"]["tags"]))
+    )
+    label_to_id: dict[str, int] = {l: i for i, l in enumerate(label_list)}
+    b_to_i_label: list[str] = []
+    for idx, label in enumerate(label_list):
+        if label.startswith("B-") and label.replace("B-", "I-") in label_list:
+            b_to_i_label.append(label_list.index(label.replace("B-", "I-")))
+        else:
+            b_to_i_label.append(idx)
+    config: PretrainedConfig = AutoConfig.from_pretrained(
+        model_name, num_labels=len(label_list)
+    )
+
+    max_length: int = max(
+        map(
+            lambda x: len(tokenizer.encode(x, is_split_into_words=True)),
+            dsd["train"]["tokens"],
+        )
+    )
+    if max_length > config.max_position_embeddings:
+        logger.warning(
+            (
+                "Although length of train datasets is %s, "
+                "that of the model is %s so we set max length as %s"
+            ),
+            max_length,
+            config.max_position_embeddings,
+            config.max_position_embeddings,
+        )
+        max_length = config.max_position_embeddings
+
+    def tokenize_and_align_tags(examples: dict[str, Any]) -> dict[str, Any]:
+        tokenized_inputs: dict[str, Any] = tokenizer(
+            examples["tokens"],
+            max_length=max_length,
+            padding="max_length",
+            truncation=True,
+            # We use this argument because the texts in our dataset are lists of words
+            # (with a label for each word).
+            is_split_into_words=True,
+        )
+        tags: list[str] = []
+        for i, label in enumerate(examples["tags"]):
+            word_ids: list[Optional[int]] = tokenized_inputs.word_ids(batch_index=i)
+            previous_word_idx = None
+            label_ids: list[int] = []
+            for word_idx in word_ids:
+                # Special tokens have a word id that is None. We set the label to -100
+                # so they are automatically
+                # ignored in the loss function.
+                if word_idx is None:
+                    label_ids.append(-100)
+                # We set the label for the first token of each word.
+                elif word_idx != previous_word_idx:
+                    label_ids.append(label_to_id[label[word_idx]])
+                # For the other tokens in a word, we set the label to -100
+                else:
+                    label_ids.append(b_to_i_label[label_to_id[label[word_idx]]])
+                previous_word_idx = word_idx
+            tags.append(label_ids)
+        tokenized_inputs["labels"] = tags
+        return tokenized_inputs
+
+    dsd = dsd.map(tokenize_and_align_tags, batched=True)
+    return dsd, config
+
+
+def preprocess_for_chain_classification(
+    dsd: DatasetDict, tokenizer: PreTrainedTokenizer, model_name: str, dataset_type: str
+) -> tuple[DatasetDict, PretrainedConfig]:
+    config: PretrainedConfig = AutoConfig.from_pretrained(model_name)
+    if DatasetType[dataset_type] == DatasetType.reco:
+        dsd = preprocess_reco_for_chain_classification(dsd, tokenizer, config)
+    return dsd, config
 
 
 def predict(args: Namespace) -> None:
@@ -36,6 +144,9 @@ def predict(args: Namespace) -> None:
 
     metrics_name: str = "f1"
 
+    assert_dataset_task_pair(
+        dataset_enum=DatasetType[dataset_type], task_enum=TaskType[task_type]
+    )
     dsd: DatasetDict = load_data(
         task_enum=TaskType[task_type],
         dataset_enum=DatasetType[dataset_type],
@@ -46,85 +157,20 @@ def predict(args: Namespace) -> None:
     tokenizer: PreTrainedTokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
 
     logger.info("Tokenize datasets")
-
-    max_length: int
-    if TaskType[task_type] == TaskType.SEQUENCE_CLASSIFICATION:
-        max_length = max(map(lambda x: len(tokenizer.encode(x)), dsd["train"]["text"]))
-    elif TaskType[task_type] == TaskType.SPAN_DETECTION:
-        max_length = max(
-            map(
-                lambda x: len(tokenizer.encode(x, is_split_into_words=True)),
-                dsd["train"]["tokens"],
-            )
+    config: PretrainedConfig
+    if TaskType[task_type] == TaskType.sequence_classification:
+        dsd, config = preprocess_for_sequence_classification(dsd, tokenizer, model_name)
+    elif TaskType[task_type] == TaskType.span_detection:
+        dsd, config = preprocess_for_span_detection(dsd, tokenizer, model_name)
+    elif TaskType[task_type] == TaskType.chain_classification:
+        dsd, config = preprocess_for_chain_classification(
+            dsd, tokenizer, model_name, dataset_type=dataset_type
         )
-
-    config: PretrainedConfig = AutoConfig.from_pretrained(model_name)
-    if max_length > config.max_position_embeddings:
-        logger.warning(
-            (
-                f"Although length of train datasets is {max_length}, "
-                f"that of the model is {config.max_position_embeddings} "
-                f"so we set max length as {config.max_position_embeddings}"
-            )
-        )
-        max_length = config.max_position_embeddings
-    if TaskType[task_type] == TaskType.SEQUENCE_CLASSIFICATION:
-        dsd = dsd.map(
-            lambda example: tokenizer(
-                example["text"],
-                max_length=max_length,
-                padding="max_length",
-                truncation=True,
-            )
-        )
-        # data_collator = transformers.default_data_collator
-    elif TaskType[task_type] == TaskType.SPAN_DETECTION:
-        label_list: list[str] = list(
-            set(itertools.chain.from_iterable(dsd["train"]["tags"]))
-        )
-        label_to_id: dict[str, int] = {l: i for i, l in enumerate(label_list)}
-        b_to_i_label: list[str] = []
-        for idx, label in enumerate(label_list):
-            if label.startswith("B-") and label.replace("B-", "I-") in label_list:
-                b_to_i_label.append(label_list.index(label.replace("B-", "I-")))
-            else:
-                b_to_i_label.append(idx)
-        # data_collator = transformers.DataCollatorForTokenClassification(tokenizer)
-        config = AutoConfig.from_pretrained(model_name, num_labels=len(label_list))
-
-        def tokenize_and_align_tags(examples: dict[str, Any]) -> dict[str, Any]:
-            tokenized_inputs: dict[str, Any] = tokenizer(
-                examples["tokens"],
-                max_length=max_length,
-                padding="max_length",
-                truncation=True,
-                # We use this argument because the texts in our dataset are lists of words (with a label for each word).
-                is_split_into_words=True,
-            )
-            tags: list[str] = []
-            for i, label in enumerate(examples["tags"]):
-                word_ids: list[Optional[int]] = tokenized_inputs.word_ids(batch_index=i)
-                previous_word_idx = None
-                label_ids: list[int] = []
-                for word_idx in word_ids:
-                    # Special tokens have a word id that is None. We set the label to -100 so they are automatically
-                    # ignored in the loss function.
-                    if word_idx is None:
-                        label_ids.append(-100)
-                    # We set the label for the first token of each word.
-                    elif word_idx != previous_word_idx:
-                        label_ids.append(label_to_id[label[word_idx]])
-                    # For the other tokens in a word, we set the label to -100
-                    else:
-                        label_ids.append(b_to_i_label[label_to_id[label[word_idx]]])
-                    previous_word_idx = word_idx
-                tags.append(label_ids)
-            tokenized_inputs["labels"] = tags
-            return tokenized_inputs
-
-        dsd = dsd.map(tokenize_and_align_tags, batched=True)
+    else:  # pragma: no cover
+        raise NotImplementedError()
 
     lst_grid_results: list[dict[str, float]] = []
+    metric = evaluate.load(metrics_name)
     for lr in lst_lr:
         training_args: TrainingArguments = TrainingArguments(
             output_dir="./materials/",
@@ -144,20 +190,13 @@ def predict(args: Namespace) -> None:
             data_seed=seed,
         )
         model: PreTrainedModel
-        if TaskType[task_type] == TaskType.SEQUENCE_CLASSIFICATION:
+        if TaskType[task_type] in (
+            TaskType.sequence_classification,
+            TaskType.chain_classification,
+        ):
             model = transformers.AutoModelForSequenceClassification.from_pretrained(
                 model_name
             )
-        elif TaskType[task_type] == TaskType.SPAN_DETECTION:
-            model = transformers.AutoModelForTokenClassification.from_pretrained(
-                model_name, config=config
-            )
-        else:
-            raise NotImplementedError()
-
-        metric = evaluate.load(metrics_name)
-
-        if TaskType[task_type] == TaskType.SEQUENCE_CLASSIFICATION:
 
             def compute_metrics(p: transformers.EvalPrediction):
                 preds = (
@@ -171,7 +210,10 @@ def predict(args: Namespace) -> None:
                     result["combined_score"] = np.mean(list(result.values())).item()
                 return result
 
-        elif TaskType[task_type] == TaskType.SPAN_DETECTION:
+        elif TaskType[task_type] == TaskType.span_detection:
+            model = transformers.AutoModelForTokenClassification.from_pretrained(
+                model_name, config=config
+            )
 
             def compute_metrics(p: transformers.EvalPrediction):
                 preds = (
@@ -188,6 +230,9 @@ def predict(args: Namespace) -> None:
                 if len(result) > 1:
                     result["combined_score"] = np.mean(list(result.values())).item()
                 return result
+
+        else:  # pragma: no cover
+            raise NotImplementedError()
 
         trainer: Trainer = Trainer(
             model=model,
@@ -230,4 +275,4 @@ def predict(args: Namespace) -> None:
             if f"_{metrics_name}" in k or k == "epoch"
         ]
     )
-    logger.info(f"Best result: {best_result}")
+    logger.info("Best result: %s", best_result)

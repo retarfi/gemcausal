@@ -10,7 +10,7 @@ from datasets import Dataset, DatasetDict
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 from tqdm import tqdm
 
-from .. import DatasetType, TaskType, logger
+from .. import DatasetType, TaskType, assert_dataset_task_pair, logger
 from ..data.load_data import load_data
 
 
@@ -54,6 +54,9 @@ def predict(args: Namespace) -> None:
 
     template: dict[str, str] = read_template(args.template)
 
+    assert_dataset_task_pair(
+        dataset_enum=DatasetType[dataset_type], task_enum=TaskType[task_type]
+    )
     dsd: DatasetDict = load_data(
         task_enum=TaskType[task_type],
         dataset_enum=DatasetType[dataset_type],
@@ -93,6 +96,8 @@ def predict(args: Namespace) -> None:
     logger.info("Inference ends")
     ds_test = ds_test.add_column("output", lst_output)
 
+    # TODO: Now only implement sequence_classification,
+    # TODO: so span_detection should be implemented
     # evaluate automatically
     def extract_label(example: dict[str, Any]) -> dict[str, Any]:
         example["pred"] = example["output"].replace(
@@ -104,6 +109,7 @@ def predict(args: Namespace) -> None:
     ds_correct: Dataset = ds_test.filter(
         lambda example: str(example["labels"]) == example["pred"]
     )
+    # TODO: change accuracy to F1
     acc: float = len(ds_correct) / len(ds_test)
     logger.info(f"Accuracy: {acc:.3f}")
 

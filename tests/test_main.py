@@ -12,8 +12,8 @@ THIS_DIR: str = os.path.dirname(os.path.abspath(__file__))
 @pytest.mark.parametrize(
     "model_type, task_type, dataset_type",
     [
-        ("openai", "SEQUENCE_CLASSIFICATION", "PDTB"),
-        ("hf-encoder", "SEQUENCE_CLASSIFICATION", "PDTB"),
+        ("openai", "sequence_classification", "pdtb"),
+        ("hf-encoder", "sequence_classification", "pdtb"),
     ],
 )
 def test_main(model_type: str, task_type: str, dataset_type: str) -> None:

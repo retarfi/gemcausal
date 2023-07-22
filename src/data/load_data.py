@@ -3,28 +3,14 @@ import re
 from enum import Enum
 from typing import Optional
 
-import pandas as pd
-from datasets import Dataset, DatasetDict, load_dataset
+from datasets import Dataset, DatasetDict
 
-# from .download import download_altlex, download_ctb, download_because2
-from .preprocess.unicausal import get_bio_for_datasets
-from .. import TaskType, DatasetType, logger
-
-
-def _load_data_unicausal_sequence_classification(data_path: str) -> Dataset:
-    ds = load_dataset("csv", data_files=data_path, split="train")
-    ds = ds.filter(lambda x: x["eg_id"] == 0)
-    ds = ds.rename_column("seq_label", "labels")
-    return ds
-
-
-def _load_data_unicausal_span_detection(data_path: str) -> Dataset:
-    df: pd.DataFrame = pd.read_csv(data_path)
-    df.drop_duplicates(subset=["corpus", "doc_id", "sent_id"], keep=False, inplace=True)
-    df = df[df.seq_label == 1]
-    ds = Dataset.from_pandas(df)
-    ds = ds.map(get_bio_for_datasets)
-    return ds
+from .unicausal import (
+    _load_data_unicausal_sequence_classification,
+    _load_data_unicausal_span_detection,
+)
+from .reco import load_reco_dataset
+from .. import TaskType, DatasetType, assert_dataset_task_pair, logger
 
 
 def load_data(
@@ -34,44 +20,24 @@ def load_data(
     test_samples: Optional[int] = None,
     seed: int = 42,
 ) -> DatasetDict:
-    # task_data_dir: str = os.path.join(data_dir, task_name)
-    # if not os.path.isdir(task_data_dir):
-    #     # download
-    #     logger.info(f"Download {task_name}")
-    #     tmp_dir: str = os.path.join(data_dir, "tmp")
-    #     if task_name == "altlex":
-    #         download_altlex(tmp_dir)
-    #     elif task_name == "ctb":
-    #         download_ctb(tmp_dir)
-    #     elif task_name == "because2":
-    #         download_because2(tmp_dir)
-    #     else:
-    #         raise NotImplementedError(
-    #             f"Downloading {task_name} is not implemented. Please downlaod manually"
-    #         )
-
-    #     # preprocess
-
-    # save
-
-    # load
+    assert_dataset_task_pair(dataset_enum=dataset_enum, task_enum=task_enum)
     ds_train_val: Dataset
     ds_train: Dataset
     ds_valid: Dataset
     ds_test: Dataset
     if dataset_enum in (
-        DatasetType.AltLex,
-        DatasetType.CTB,
-        DatasetType.ESL,
-        DatasetType.PDTB,
-        DatasetType.SemEval,
+        DatasetType.altlex,
+        DatasetType.ctb,
+        DatasetType.esl,
+        DatasetType.pdtb,
+        DatasetType.semeval,
     ):
-        if dataset_enum == DatasetType.PDTB:
+        if dataset_enum == DatasetType.pdtb:
             data_path: str = os.path.join(data_dir, "pdtb.csv")
             ds: Dataset
-            if task_enum == TaskType.SEQUENCE_CLASSIFICATION:
+            if task_enum == TaskType.sequence_classification:
                 ds = _load_data_unicausal_sequence_classification(data_path)
-            elif task_enum == TaskType.SPAN_DETECTION:
+            elif task_enum == TaskType.span_detection:
                 ds = _load_data_unicausal_span_detection(data_path)
             else:
                 raise NotImplementedError()
@@ -80,13 +46,13 @@ def load_data(
             ds_train_val = ds.filter(lambda x: not test_ptn.match(x["doc_id"]))
         else:
             dataset_path_prefix: str
-            if dataset_enum == DatasetType.AltLex:
+            if dataset_enum == DatasetType.altlex:
                 dataset_path_prefix = "altlex"
-            elif dataset_enum == DatasetType.CTB:
+            elif dataset_enum == DatasetType.ctb:
                 dataset_path_prefix = "ctb"
-            elif dataset_enum == DatasetType.ESL:
+            elif dataset_enum == DatasetType.esl:
                 dataset_path_prefix = "esl2"
-            elif dataset_enum == DatasetType.SemEval:
+            elif dataset_enum == DatasetType.semeval:
                 dataset_path_prefix = "semeval2010t8"
             else:
                 raise NotImplementedError()
@@ -96,18 +62,18 @@ def load_data(
             test_data_path: str = os.path.join(
                 data_dir, f"{dataset_path_prefix}_test.csv"
             )
-            if task_enum == TaskType.SEQUENCE_CLASSIFICATION:
+            if task_enum == TaskType.sequence_classification:
                 ds_train_val = _load_data_unicausal_sequence_classification(
                     train_val_data_path
                 )
                 ds_test = _load_data_unicausal_sequence_classification(test_data_path)
-            elif task_enum == TaskType.SPAN_DETECTION:
+            elif task_enum == TaskType.span_detection:
                 ds_train_val = _load_data_unicausal_span_detection(train_val_data_path)
                 ds_test = _load_data_unicausal_span_detection(test_data_path)
             else:
                 raise NotImplementedError()
         test_size: int
-        if len(ds_test) * 2 < len(ds_train_val):
+        if len(ds_test) * 4 < len(ds_train_val):
             test_size = len(ds_test)
         else:
             test_size = int(len(ds_train_val) * 0.2)
@@ -116,7 +82,13 @@ def load_data(
         )
         ds_train = dsd_train_val["train"]
         ds_valid = dsd_train_val["test"]
-    else:
+    elif dataset_enum == DatasetType.reco:
+        reco_dir: str = os.path.join(data_dir, "reco")
+        assert os.path.isdir(reco_dir), f"{reco_dir} for ReCo data does not exist"
+        ds_train = load_reco_dataset(os.path.join(reco_dir, "train.json"))
+        ds_valid = load_reco_dataset(os.path.join(reco_dir, "dev.json"))
+        ds_test = load_reco_dataset(os.path.join(reco_dir, "test.json"))
+    else:  # pragma: no cover
         raise NotImplementedError()
 
     if test_samples is not None:
@@ -126,20 +98,24 @@ def load_data(
             logger.warning(
                 (
                     "Test sampling is not executed because test_samples > number of "
-                    f"test samples ({len(ds_test)})"
+                    "test samples (%s)",
+                    len(ds_test),
                 )
             )
     dsd: DatasetDict = DatasetDict(
         {"train": ds_train, "valid": ds_valid, "test": ds_test}
     )
-    logger.info(f"# of samples: {dsd.num_rows}")
+    logger.info("# of samples: %s", dsd.num_rows)
     # drop and assert columns
     for key, ds_ in dsd.items():
         set_columns: set[str]
-        if task_enum == TaskType.SEQUENCE_CLASSIFICATION:
+        if task_enum == TaskType.sequence_classification:
             set_columns = {"text", "labels"}
-        elif task_enum == TaskType.SPAN_DETECTION:
+        elif task_enum == TaskType.span_detection:
             set_columns = {"tokens", "tags"}
+        elif task_enum == TaskType.chain_classification:
+            if dataset_enum == DatasetType.reco:
+                set_columns = {"events", "short_contexts", "labels"}
         else:  # pragma: no cover
             raise NotImplementedError()
         dsd[key] = ds_.remove_columns(list(set(ds_.column_names) - set_columns))

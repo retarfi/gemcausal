@@ -1,6 +1,6 @@
 import pytest
 
-from src.data.preprocess.unicausal import remove_tag, get_bio, get_bio_for_datasets
+from src.data.unicausal import remove_tag, get_bio, get_bio_for_datasets
 
 
 @pytest.mark.parametrize(

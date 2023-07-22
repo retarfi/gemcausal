@@ -14,30 +14,33 @@ THIS_DIR: str = os.path.dirname(os.path.abspath(__file__))
 
 
 @pytest.mark.parametrize(
-    "task_name, dataset_name, test_samples, num_total, num_test, expectation",
+    "task_name, dataset_name, test_samples, num_train, num_valid, num_test, expectation",
     [
-        ("SEQUENCE_CLASSIFICATION", "AltLex", None, 978, 401, does_not_raise()),
-        ("SPAN_DETECTION", "AltLex", None, 376, 100, does_not_raise()),
-        ("SEQUENCE_CLASSIFICATION", "CTB", None, 2201, 316, does_not_raise()),
-        ("SEQUENCE_CLASSIFICATION", "ESL", None, 2232, 232, does_not_raise()),
-        ("SEQUENCE_CLASSIFICATION", "PDTB", None, 42850, 8083, does_not_raise()),
+        ("sequence_classification", "altlex", None, 462, 115, 401, does_not_raise()),
+        ("span_detection", "altlex", None, 221, 55, 100, does_not_raise()),
+        ("sequence_classification", "ctb", None, 1569, 316, 316, does_not_raise()),
+        ("sequence_classification", "esl", None, 1768, 232, 232, does_not_raise()),
+        ("sequence_classification", "pdtb", None, 26684, 8083, 8083, does_not_raise()),
         (
-            "SEQUENCE_CLASSIFICATION",
-            "PDTB",
+            "sequence_classification",
+            "pdtb",
             1000,
-            35767,
+            26684,
+            8083,
             1000,
             does_not_raise(),
         ),  # limit dataset
-        ("SPAN_DETECTION", "PDTB", None, 7294, 1300, does_not_raise()),
-        ("SEQUENCE_CLASSIFICATION", "SemEval", None, 10690, 2715, does_not_raise()),
+        ("span_detection", "pdtb", None, 4694, 1300, 1300, does_not_raise()),
+        ("chain_classification", "reco", None, 3111, 417, 672, does_not_raise()),
+        ("sequence_classification", "semeval", None, 6380, 1595, 2715, does_not_raise()),
         (
-            "CHAIN_CONSTRUCTION",
-            "PDTB",
+            "chain_classification",
+            "pdtb",
             None,
             -1,
             -1,
-            pytest.raises(NotImplementedError),
+            -1,
+            pytest.raises(ValueError),
         ),
     ],
 )
@@ -45,7 +48,8 @@ def test_load_data(
     task_name: str,
     dataset_name: str,
     test_samples: Optional[int],
-    num_total: int,
+    num_train: int,
+    num_valid: int,
     num_test: int,
     expectation: AbstractContextManager,
 ) -> None:
@@ -57,5 +61,6 @@ def test_load_data(
             test_samples=test_samples,
         )
         assert isinstance(dsd, DatasetDict)
-        assert sum(dsd.num_rows.values()) == num_total
+        assert len(dsd["train"]) == num_train
+        assert len(dsd["valid"]) == num_valid
         assert len(dsd["test"]) == num_test
