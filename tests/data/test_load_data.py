@@ -17,7 +17,7 @@ THIS_DIR: str = os.path.dirname(os.path.abspath(__file__))
     "task_name, dataset_name, test_samples, num_train, num_valid, num_test, expectation",
     [
         ("sequence_classification", "altlex", None, 462, 115, 401, does_not_raise()),
-        ("span_detection", "altlex", None, 221, 55, 100, does_not_raise()),
+        ("span_detection", "altlex", 300, 221, 55, 100, does_not_raise()),
         ("sequence_classification", "ctb", None, 1569, 316, 316, does_not_raise()),
         ("sequence_classification", "esl", None, 1768, 232, 232, does_not_raise()),
         ("sequence_classification", "pdtb", None, 26684, 8083, 8083, does_not_raise()),
