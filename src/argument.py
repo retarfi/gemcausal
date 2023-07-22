@@ -1,6 +1,7 @@
 from argparse import ArgumentParser
 
 from . import DatasetType, TaskType
+from .prediction import predict_hf_encoder, predict_openai
 
 
 def add_argument_common(parser: ArgumentParser) -> None:
@@ -43,3 +44,25 @@ def add_argument_openai(parser: ArgumentParser) -> None:
         "--shot", help="Number of shots", choices=[1, 2, 3], required=True, type=int
     )
     parser.add_argument("--output_dir", required=True)
+
+
+def main() -> None:
+    parent_parser = ArgumentParser()
+    subparsers = parent_parser.add_subparsers()
+
+    parser_hf_encoder = subparsers.add_parser(
+        "hf-encoder", help="see `hf-encoder --help`"
+    )
+    add_argument_common(parser_hf_encoder)
+    add_argument_hf_encoder(parser_hf_encoder)
+    parser_hf_encoder.set_defaults(func=predict_hf_encoder)
+
+    parser_openai = subparsers.add_parser(
+        "openai", help="see `openai --help`"
+    )
+    add_argument_common(parser_openai)
+    add_argument_openai(parser_openai)
+    parser_openai.set_defaults(func=predict_openai)
+
+    args = parent_parser.parse_args()
+    args.func(args)

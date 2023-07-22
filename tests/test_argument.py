@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 import pytest
 
-from src.main import main
+from src.argument import main
 
 THIS_DIR: str = os.path.dirname(os.path.abspath(__file__))
 

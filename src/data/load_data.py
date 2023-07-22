@@ -39,7 +39,7 @@ def load_data(
                 ds = _load_data_unicausal_sequence_classification(data_path)
             elif task_enum == TaskType.span_detection:
                 ds = _load_data_unicausal_span_detection(data_path)
-            else:
+            else:  # pragma: no cover
                 raise NotImplementedError()
             test_ptn: re.Pattern = re.compile(r"wsj_(00|01|22|23|24).+")
             ds_test = ds.filter(lambda x: test_ptn.match(x["doc_id"]))
@@ -54,7 +54,7 @@ def load_data(
                 dataset_path_prefix = "esl2"
             elif dataset_enum == DatasetType.semeval:
                 dataset_path_prefix = "semeval2010t8"
-            else:
+            else:  # pragma: no cover
                 raise NotImplementedError()
             train_val_data_path: str = os.path.join(
                 data_dir, f"{dataset_path_prefix}_train.csv"
@@ -70,7 +70,7 @@ def load_data(
             elif task_enum == TaskType.span_detection:
                 ds_train_val = _load_data_unicausal_span_detection(train_val_data_path)
                 ds_test = _load_data_unicausal_span_detection(test_data_path)
-            else:
+            else:  # pragma: no cover
                 raise NotImplementedError()
         test_size: int
         if len(ds_test) * 4 < len(ds_train_val):
