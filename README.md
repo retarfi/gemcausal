@@ -42,7 +42,7 @@ openai \
 --data_dir data/ \
 --test_samples 200 \
 --model gpt-3.5-turbo \
---template tempalte/openai_sequence.json \
+--template tempalte/openai_sequence_classification.json \
 --shot 2 \
 --output_dir materials/result/
 ```

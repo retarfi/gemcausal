@@ -112,7 +112,7 @@ def load_data(
         if task_enum == TaskType.sequence_classification:
             set_columns = {"text", "labels"}
         elif task_enum == TaskType.span_detection:
-            set_columns = {"tokens", "tags"}
+            set_columns = {"text", "tokens", "tags"}
         elif task_enum == TaskType.chain_classification:
             if dataset_enum == DatasetType.reco:
                 set_columns = {"events", "short_contexts", "labels"}

@@ -1,12 +1,15 @@
 import datetime
+import itertools
 import json
 import os
 import random
 from argparse import Namespace
-from typing import Any
+from typing import Any, Union
 
 import openai
+import datasets
 from datasets import Dataset, DatasetDict
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 from tqdm import tqdm
 
@@ -43,6 +46,32 @@ def completion_with_backoff(**kwargs):
     return openai.ChatCompletion.create(**kwargs)
 
 
+def compute_metrics(
+    y_true: list[str], y_pred: list[str], labels: list[str], average: str
+) -> dict[str, float]:
+    # prepare compute metrics because evaluate module cannot deal with labels other than
+    # gold labels
+    assert average in {
+        "macro",
+        "micro",
+        "binary",
+    }, f"average {average} is not implemented"
+    if average == "binary":
+        assert (
+            len(labels) == 1
+        ), "In binary classification the number of labels must be 1"
+        average = None
+    precision, recall, f1, _ = precision_recall_fscore_support(
+        y_true, y_pred, average=average, labels=labels
+    )
+    return {
+        "accuracy": accuracy_score(y_true, y_pred),
+        "f1": f1,
+        "precision": precision,
+        "recall": recall,
+    }
+
+
 def predict(args: Namespace) -> None:
     api_key_validation()
     task_type: str = args.task_type
@@ -68,19 +97,65 @@ def predict(args: Namespace) -> None:
     dsd_icl: Dataset = dsd["train"].select(
         random.sample(range(len(dsd["train"])), k=shot)
     )
-    annotation = template["header_example"]
-    for i in range(shot):
-        annotation += template["format_text"].format(dsd_icl[i]["text"])
-        annotation += template["format_class"].format(dsd_icl[i]["labels"])
+    annotation: str = template["header_example"]
+    if TaskType[task_type] == TaskType.sequence_classification:
+        for i in range(shot):
+            annotation += template["format_text"].format(dsd_icl[i]["text"])
+            annotation += template["format_class"].format(dsd_icl[i]["labels"])
 
-    # prepare prompt
-    def format_prompt(example: dict[str, Any]) -> dict[str, Any]:
-        prompt: str = template["task_description"]
-        if shot > 0:
-            prompt += annotation
-        prompt += template["question"] + template["format_text"].format(example["text"])
-        example["prompt"] = prompt
-        return example
+        def format_prompt(example: dict[str, Any]) -> dict[str, Any]:
+            prompt: str = template["task_description"]
+            if shot > 0:
+                prompt += annotation
+            prompt += template["question"] + template["format_text"].format(
+                example["text"]
+            )
+            example["prompt"] = prompt
+            return example
+
+    elif TaskType[task_type] == TaskType.span_detection:
+        for i in range(shot):
+            annotation += template["format_text"].format(
+                dsd_icl[i]["text"], " / ".join(dsd_icl[i]["tokens"])
+            )
+            annotation += template["format_class"].format(
+                "".join(
+                    map(
+                        lambda item: template["format_tag"].format(*item),
+                        zip(dsd_icl[i]["tokens"], dsd_icl[i]["tags"]),
+                    )
+                )
+            )
+
+        def format_prompt(example: dict[str, Any]) -> dict[str, Any]:
+            prompt: str = template["task_description"]
+            if shot > 0:
+                prompt += annotation
+            prompt += template["question"] + template["format_text"].format(
+                dsd_icl[i]["text"], " / ".join(dsd_icl[i]["tokens"])
+            )
+            example["prompt"] = prompt
+            return example
+
+    elif TaskType[task_type] == TaskType.chain_classification:
+        for i in range(shot):
+            annotation += template["format_text"].format(
+                ", ".join(dsd_icl[i]["events"]), *dsd_icl[i]["short_contexts"]
+            )
+            annotation += template["format_class"].format(dsd_icl[i]["labels"])
+
+        def format_prompt(example: dict[str, Any]) -> dict[str, Any]:
+            prompt: str = template["task_description"]
+            if shot > 0:
+                prompt += annotation
+            prompt += template["question"] + template["format_text"].format(
+                ", ".join(example["events"]), *example["short_contexts"]
+            )
+            example["prompt"] = prompt
+            return example
+
+    else:  # pragma: no cover
+        raise NotImplementedError()
 
     ds_test: Dataset = dsd["test"]
     ds_test = ds_test.map(format_prompt)
@@ -96,27 +171,88 @@ def predict(args: Namespace) -> None:
     logger.info("Inference ends")
     ds_test = ds_test.add_column("output", lst_output)
 
-    # TODO: Now only implement sequence_classification,
-    # TODO: so span_detection should be implemented
-    # evaluate automatically
-    def extract_label(example: dict[str, Any]) -> dict[str, Any]:
-        example["pred"] = example["output"].replace(
-            template["format_class"].split("{}")[0], ""
-        )[0]
-        return example
+    ds_output: Dataset
+    if TaskType[task_type] in (
+        TaskType.sequence_classification,
+        TaskType.chain_classification,
+    ):
+        features: datasets.Features = ds_test.features.copy()
+        features["labels"] = datasets.Value("string")
+        ds_output = ds_test.cast(features)
 
-    ds_test = ds_test.map(extract_label)
-    ds_correct: Dataset = ds_test.filter(
-        lambda example: str(example["labels"]) == example["pred"]
-    )
-    # TODO: change accuracy to F1
-    acc: float = len(ds_correct) / len(ds_test)
-    logger.info(f"Accuracy: {acc:.3f}")
+        def extract_label(example: dict[str, Any]) -> dict[str, Any]:
+            example["pred"] = example["output"].replace(
+                template["format_class"].split("{}")[0], ""
+            )
+            return example
 
-    # output prompt result
-    ds_output: Dataset = ds_test.remove_columns(
-        list(set(ds_test.column_names) - {"labels", "output", "pred"})
-    )
+        ds_output = ds_output.map(extract_label)
+        result: dict[str, float] = compute_metrics(
+            ds_output["labels"], ds_output["pred"], labels=["1"], average="binary"
+        )
+        logger.info("Result: %s", result)
+
+        # output prompt result
+        ds_output = ds_output.remove_columns(
+            list(set(ds_test.column_names) - {"labels", "output", "pred"})
+        )
+    elif TaskType[task_type] == TaskType.span_detection:
+
+        def extract_label(example: dict[str, Any]) -> dict[str, Any]:
+            example["pred_asis"] = example["output"].replace(
+                template["format_class"].split("{}")[0], ""
+            )
+            lst_pred_tags: list[str] = [
+                line.replace(tag + template["format_tag"].split("{}")[1], "")
+                for tag, line in zip(
+                    example["tokens"], example["pred_asis"].split("\n")
+                )
+            ]
+            example["pred"] = lst_pred_tags
+            return example
+
+        ds_output = ds_test.map(extract_label)
+        result: dict[str, float] = compute_metrics(
+            list(itertools.chain.from_iterable(ds_output["tags"])),
+            list(itertools.chain.from_iterable(ds_output["pred"])),
+            labels=["B-C", "I-C", "B-E", "I-E", "O"],
+            average="macro",
+        )
+        logger.info("Result: %s", result)
+
+        # output prompt result
+        ds_output = ds_output.remove_columns(
+            list(
+                set(ds_test.column_names)
+                - {"text", "tokens", "tags", "output", "pred", "pred_asis"}
+            )
+        )
+
+        def extract_by_tokens(
+            example: dict[str, Union[list[str], str]]
+        ) -> dict[str, Union[list[str], str]]:
+            lst: list[dict[str, Union[list[str], str]]] = []
+            for i in range(len(example["text"])):
+                for j in range(len(example["tokens"][i])):
+                    lst.append(
+                        {
+                            "text": example["text"][i],
+                            "token": example["tokens"][i][j],
+                            "tag": example["tags"][i][j],
+                            "output": example["output"][i],
+                            "pred_tag": example["pred"][i][j],
+                        }
+                    )
+            return {k: [x[k] for x in lst] for k in lst[0].keys()}
+
+        ds_output = ds_output.map(
+            extract_by_tokens,
+            batched=True,
+            remove_columns=["tokens", "tags", "pred", "pred_asis"],
+        )
+    else:  # pragma: no cover
+        raise NotImplementedError()
+
     filename: str = (
         datetime.datetime.now().strftime("%Y%m%d_%H%M_")
         + f"{task_type}_{dataset_type}_{model}.csv"

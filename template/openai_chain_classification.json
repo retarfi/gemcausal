@@ -1,0 +1,7 @@
+{
+    "task_description": "Please perform a causal chain classification according to the following rules\n1. Determine if the two causal pairs between the three things shown by Events, Text1 and Text2 can be connected as a reliable causal chain. If it does, label it as N1 and stop.\n2. If the text does not, label it as N0 and stop.\n\n",
+    "header_example": "Annotation Examples:\n",
+    "format_text": "Events: {}\nText1: {}\nText2:{}\n",
+    "format_class": "Classification: N{}\n\n",
+    "question": "According to the policy above, should the following events and texts be classified as N1 or N0?\n"
+}
