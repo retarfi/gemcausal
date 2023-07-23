@@ -24,7 +24,7 @@ def test_main(model_type: str, task_type: str, dataset_type: str) -> None:
     if model_type == "openai":
         args += (
             "--model gpt-3.5-turbo "
-            f"--template {os.path.join(THIS_DIR, '../template/openai_sequence.json')} "
+            f"--template {os.path.join(THIS_DIR, '../template/openai_sequence_classification.json')} "
             "--shot 1 "
             f"--output_dir {os.path.join(THIS_DIR, 'materials/results/')}"
         )
