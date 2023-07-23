@@ -63,10 +63,7 @@ hf-encoder \
 ```
 
 ## Data Preprocessing
-
-### UniCausal
-
-Please download processed data from [Unicausal data](https://github.com/tanfiona/UniCausal/tree/main/data/splits) (for AltLex) or process with [UniCausal Jupyter files](https://github.com/tanfiona/UniCausal/tree/main/processing) by yourself, and save downloaded or processed csv files into `./data/`.
+For download and preprocess information, see [data/README.md](data/README.md)
 
 ## Number of Examples
 
