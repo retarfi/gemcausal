@@ -77,14 +77,14 @@ def test_predict(task_type: str, dataset_type: str, json_file: str) -> None:
             os.path.join(THIS_DIR, "../../data"),
             "--test_samples",
             "5",
+            "--output_dir",
+            os.path.join(THIS_DIR, "../materials/results"),
             "--model",
             "gpt-3.5-turbo",
             "--template",
             os.path.join(THIS_DIR, "../../template", json_file),
             "--shot",
             "1",
-            "--output_dir",
-            os.path.join(THIS_DIR, "../materials/results"),
         ]
     )
     predict(args)

@@ -21,6 +21,7 @@ def add_argument_common(parser: ArgumentParser) -> None:
         help="Limit test samples from the head. If not specified, use all samples",
     )
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--output_dir", required=True, help="Output directory for json and csv (OpenAI model) ")
 
 
 def add_argument_hf_encoder(parser: ArgumentParser) -> None:
@@ -43,7 +44,6 @@ def add_argument_openai(parser: ArgumentParser) -> None:
     parser.add_argument(
         "--shot", help="Number of shots", choices=[1, 2, 3], required=True, type=int
     )
-    parser.add_argument("--output_dir", required=True)
 
 
 def main() -> None:

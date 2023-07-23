@@ -35,7 +35,7 @@ poetry add torch --source torch_cu117
 When using OpenAI API:
 
 ```sh
-OPENAI_API_KEY=XXX poetry run python src/main.py \
+OPENAI_API_KEY=XXX poetry run python main.py \
 openai \
 --task_type <sequence_classification|span_detection> \
 --dataset_type <altlex|ctb|esl|semeval|pdtb> \
@@ -50,7 +50,7 @@ openai \
 When using a HuggingFace encoder model:
 
 ```sh
-poetry run python src/main.py \
+poetry run python main.py \
 hf-encoder \
 --task_type <sequence_classification|span_detection> \
 --dataset_type <altlex|ctb|esl|semeval|pdtb> \

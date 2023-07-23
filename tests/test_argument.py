@@ -20,13 +20,13 @@ def test_main(model_type: str, task_type: str, dataset_type: str) -> None:
     args: str = (
         f"{model_type} --task_type {task_type} --dataset_type {dataset_type} "
         f"--data_dir {os.path.join(THIS_DIR, '../data/')} --test_samples 2 "
+        f"--output_dir {os.path.join(THIS_DIR, 'materials/results/')} "
     )
     if model_type == "openai":
         args += (
             "--model gpt-3.5-turbo "
             f"--template {os.path.join(THIS_DIR, '../template/openai_sequence_classification.json')} "
             "--shot 1 "
-            f"--output_dir {os.path.join(THIS_DIR, 'materials/results/')}"
         )
     elif model_type == "hf-encoder":
         args += (

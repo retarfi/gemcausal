@@ -1,6 +1,9 @@
+import datetime
 import itertools
+import json
+import os
 from argparse import Namespace
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 import numpy as np
 import torch
@@ -268,3 +271,24 @@ def predict(args: Namespace) -> None:
         ]
     )
     logger.info("Best result: %s", best_result)
+
+    filehead: str = (
+        datetime.datetime.now().strftime("%Y%m%d_%H%M_")
+        + f"{task_type}_{dataset_type}_hf_encoder"
+    )
+    result: list[str, Union[list[str], str]] = {
+        **best_result,
+        **{
+            "task_type": task_type,
+            "dataset_type": dataset_type,
+            "model": model_name,
+            "tokenizer": tokenizer_name,
+            "lr": lst_lr,
+            "train_batch_size": train_batch_size,
+            "max_epochs": max_epochs,
+            "seed": seed,
+            "test_samples": args.test_samples,
+        },
+    }
+    with open(os.path.join(args.output_dir, f"{filehead}.json"), "w") as f:
+        json.dump(result, f)

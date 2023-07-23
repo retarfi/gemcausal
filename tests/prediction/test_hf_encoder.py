@@ -32,6 +32,8 @@ def test_predict(task_type: str, dataset_type: str) -> None:
             os.path.join(THIS_DIR, "../../data"),
             "--test_samples",
             "5",
+            "--output_dir",
+            os.path.join(THIS_DIR, "../materials/results"),
             "--model_name",
             "google/bert_uncased_L-2_H-128_A-2",
             "--train_batch_size",

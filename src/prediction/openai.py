@@ -6,8 +6,9 @@ import random
 from argparse import Namespace
 from typing import Any, Union
 
-import openai
 import datasets
+import numpy as np
+import openai
 from datasets import Dataset, DatasetDict
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 from tenacity import retry, stop_after_attempt, wait_random_exponential
@@ -61,9 +62,19 @@ def compute_metrics(
             len(labels) == 1
         ), "In binary classification the number of labels must be 1"
         average = None
+
+    precision: Union[np.ndarray, float]
+    recall: Union[np.ndarray, float]
+    f1: Union[np.ndarray, float]
     precision, recall, f1, _ = precision_recall_fscore_support(
         y_true, y_pred, average=average, labels=labels
     )
+    if not isinstance(precision, float):
+        precision = precision[0]
+    if not isinstance(recall, float):
+        recall = recall[0]
+    if not isinstance(f1, float):
+        f1 = f1[0]
     return {
         "accuracy": accuracy_score(y_true, y_pred),
         "f1": f1,
@@ -81,6 +92,7 @@ def predict(args: Namespace) -> None:
     output_dir: str = args.output_dir
     seed: int = args.seed
 
+    os.makedirs(output_dir, exist_ok=True)
     template: dict[str, str] = read_template(args.template)
 
     assert_dataset_task_pair(
@@ -253,8 +265,21 @@ def predict(args: Namespace) -> None:
     else:  # pragma: no cover
         raise NotImplementedError()
 
-    filename: str = (
+    filehead: str = (
         datetime.datetime.now().strftime("%Y%m%d_%H%M_")
-        + f"{task_type}_{dataset_type}_{model}.csv"
+        + f"{task_type}_{dataset_type}_{model}"
     )
-    ds_output.to_csv(os.path.join(output_dir, filename))
+    result = {
+        **result,
+        **{
+            "task_type": task_type,
+            "dataset_type": dataset_type,
+            "model": model,
+            "template": args.template,
+            "shot": shot,
+            "seed": seed,
+        },
+    }
+    with open(os.path.join(output_dir, f"{filehead}.json"), "w") as f:
+        json.dump(result, f)
+    ds_output.to_csv(os.path.join(output_dir, f"{filehead}.csv"))
