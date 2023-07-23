@@ -290,5 +290,8 @@ def predict(args: Namespace) -> None:
             "test_samples": args.test_samples,
         },
     }
+    for key in lst_metrics:
+        for part in ("valid", "test"):
+            result[f"{part}_{key}"] = round(result[f"{part}_{key}"], 5)
     with open(os.path.join(args.output_dir, f"{filehead}.json"), "w") as f:
-        json.dump(result, f)
+        json.dump(result, f, indent=4, sort_keys=True, separators=(",", ": "))

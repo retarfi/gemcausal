@@ -280,6 +280,8 @@ def predict(args: Namespace) -> None:
             "seed": seed,
         },
     }
+    for key in ("f1", "accuracy", "precision", "recall"):
+        result[key] = round(result[key], 5)
     with open(os.path.join(output_dir, f"{filehead}.json"), "w") as f:
-        json.dump(result, f)
+        json.dump(result, f, indent=4, sort_keys=True, separators=(",", ": "))
     ds_output.to_csv(os.path.join(output_dir, f"{filehead}.csv"))
