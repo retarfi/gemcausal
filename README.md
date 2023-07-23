@@ -31,20 +31,21 @@ poetry add torch --source torch_cu117
 ```
 
 ### Run Evaluation
+See the Available Tasks table for available `--task_type` and `--dataset_type` combinations.
 
 When using OpenAI API:
 
 ```sh
 OPENAI_API_KEY=XXX poetry run python main.py \
 openai \
---task_type <sequence_classification|span_detection> \
+--task_type <sequence_classification|span_detection|chain_classification> \
 --dataset_type <altlex|ctb|esl|semeval|pdtb> \
 --data_dir data/ \
 --test_samples 200 \
+--output_dir materials/result/ \
 --model gpt-3.5-turbo \
---template tempalte/openai_sequence_classification.json \
---shot 2 \
---output_dir materials/result/
+--template template/openai_sequence_classification.json \
+--shot 2
 ```
 
 When using a HuggingFace encoder model:
@@ -52,10 +53,11 @@ When using a HuggingFace encoder model:
 ```sh
 poetry run python main.py \
 hf-encoder \
---task_type <sequence_classification|span_detection> \
+--task_type <sequence_classification|span_detection|chain_classification> \
 --dataset_type <altlex|ctb|esl|semeval|pdtb> \
 --data_dir data/ \
 --test_samples 200 \
+--output_dir materials/result/ \
 --model_name google/bert_uncased_L-2_H-128_A-2 \
 --lr 5e-6 7e-6 1e-5 2e-5 3e-5 5e-5 \
 --train_batch_size 32 \
