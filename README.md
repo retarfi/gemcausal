@@ -57,6 +57,7 @@ hf-encoder \
 --data_dir data/ \
 --test_samples 200 \
 --model_name google/bert_uncased_L-2_H-128_A-2 \
+--lr 5e-6 7e-6 1e-5 2e-5 3e-5 5e-5 \
 --train_batch_size 32 \
 --eval_batch_size 2 \
 --max_epochs 10
