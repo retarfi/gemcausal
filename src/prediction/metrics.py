@@ -37,5 +37,6 @@ evaluate.CombinedEvaluations.compute = compute
 
 
 def load_metrics(lst_metrics: list[str]) -> evaluate.CombinedEvaluations:
+    # for hf model
     metrics = evaluate.combine(lst_metrics)
     return metrics
