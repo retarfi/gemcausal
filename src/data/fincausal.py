@@ -32,6 +32,7 @@ def load_data_fincausal(
             for x in ["", "2"]
         ]
     )
+    df.dropna(subset=["Text"], inplace=True)
     df.drop(columns=["Index"], inplace=True)
     ds: Dataset
     if task_enum == TaskType.sequence_classification:
