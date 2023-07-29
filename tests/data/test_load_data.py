@@ -20,6 +20,16 @@ THIS_DIR: str = os.path.dirname(os.path.abspath(__file__))
         ("span_detection", "altlex", 300, 221, 55, 100, does_not_raise()),
         ("sequence_classification", "ctb", None, 1569, 316, 316, does_not_raise()),
         ("sequence_classification", "esl", None, 1768, 232, 232, does_not_raise()),
+        (
+            "sequence_classification",
+            "fincausal",
+            None,
+            17060,
+            2133,
+            2133,
+            does_not_raise(),
+        ),
+        ("span_detection", "fincausal", None, 1087, 136, 136, does_not_raise()),
         ("sequence_classification", "pdtb", None, 26684, 8083, 8083, does_not_raise()),
         (
             "sequence_classification",
@@ -32,16 +42,16 @@ THIS_DIR: str = os.path.dirname(os.path.abspath(__file__))
         ),  # limit dataset
         ("span_detection", "pdtb", None, 4694, 1300, 1300, does_not_raise()),
         ("chain_classification", "reco", None, 3111, 417, 672, does_not_raise()),
-        ("sequence_classification", "semeval", None, 6380, 1595, 2715, does_not_raise()),
         (
-            "chain_classification",
-            "pdtb",
+            "sequence_classification",
+            "semeval",
             None,
-            -1,
-            -1,
-            -1,
-            pytest.raises(ValueError),
+            6380,
+            1595,
+            2715,
+            does_not_raise(),
         ),
+        ("chain_classification", "pdtb", None, -1, -1, -1, pytest.raises(ValueError)),
     ],
 )
 def test_load_data(

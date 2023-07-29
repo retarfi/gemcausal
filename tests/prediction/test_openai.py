@@ -21,7 +21,9 @@ def test_api_key_validation() -> None:
 
 
 def test_read_template() -> None:
-    read_template(os.path.join(THIS_DIR, "../../template/openai_sequence_classification.json"))
+    read_template(
+        os.path.join(THIS_DIR, "../../template/openai_sequence_classification.json")
+    )
 
 
 def test_completion_with_backoff() -> None:
@@ -57,9 +59,11 @@ def test_compute_metrics(
 @pytest.mark.parametrize(
     "task_type, dataset_type, json_file",
     [
+        ("sequence_classification", "fincausal", "openai_sequence_classification.json"),
         ("sequence_classification", "pdtb", "openai_sequence_classification.json"),
+        ("span_detection", "fincausal", "openai_span_detection.json"),
         ("span_detection", "pdtb", "openai_span_detection.json"),
-        ("chain_classification", "reco", "openai_chain_classification.json")
+        ("chain_classification", "reco", "openai_chain_classification.json"),
     ],
 )
 def test_predict(task_type: str, dataset_type: str, json_file: str) -> None:

@@ -100,8 +100,36 @@ def preprocess_for_span_detection(
         )
         tags: list[str] = []
         for i, label in enumerate(examples["tags"]):
-            word_ids: list[Optional[int]] = tokenized_inputs.word_ids(batch_index=i)
-            previous_word_idx = None
+            word_ids: list[Optional[int]]
+            if tokenizer.is_fast:
+                word_ids = tokenized_inputs.word_ids(batch_index=i)
+            else:
+                word_ids = []
+                word_idx: int = 0
+                subwords: list[int] = tokenizer.encode(
+                    examples["tokens"][i][word_idx], add_special_tokens=False
+                )
+                cand_subword: int = subwords.pop(0)
+                for token_idx in tokenized_inputs["input_ids"][i]:
+                    if token_idx in (
+                        tokenizer.pad_token_id,
+                        tokenizer.cls_token_id,
+                        tokenizer.sep_token_id,
+                    ):
+                        word_ids.append(None)
+                    elif token_idx == cand_subword:
+                        word_ids.append(word_idx)
+                        if word_idx + 1 < len(examples["tokens"][i]):
+                            if len(subwords) == 0:
+                                word_idx += 1
+                                subwords = tokenizer.encode(
+                                    examples["tokens"][i][word_idx],
+                                    add_special_tokens=False,
+                                )
+                            cand_subword = subwords.pop(0)
+                    else:  # pragma: no cover
+                        raise ValueError(examples["tokens"][i])
+            previous_word_idx: Optional[int] = None
             label_ids: list[int] = []
             for word_idx in word_ids:
                 # Special tokens have a word id that is None. We set the label to -100

@@ -1,7 +1,18 @@
 from enum import Enum, EnumMeta
 
 DatasetType: EnumMeta = Enum(
-    "Dataset", ("altlex", "ctb", "esl", "pdtb", "reco", "semeval")
+    "Dataset",
+    (
+        "altlex",
+        "ctb",
+        "esl",
+        "fincausal",
+        "jpfinresults",
+        "jpnikkei",
+        "pdtb",
+        "reco",
+        "semeval",
+    ),
 )
 TaskType: EnumMeta = Enum(
     "Task", ("sequence_classification", "span_detection", "chain_classification")
@@ -10,6 +21,15 @@ DatasetTaskPairs: tuple[tuple[Enum, tuple[Enum]]] = (
     (DatasetType.altlex, (TaskType.sequence_classification, TaskType.span_detection)),
     (DatasetType.ctb, (TaskType.sequence_classification,)),
     (DatasetType.esl, (TaskType.sequence_classification,)),
+    (
+        DatasetType.fincausal,
+        (TaskType.sequence_classification, TaskType.span_detection),
+    ),
+    (
+        DatasetType.jpfinresults,
+        (TaskType.sequence_classification, TaskType.span_detection),
+    ),
+    (DatasetType.jpnikkei, (TaskType.sequence_classification,)),
     (DatasetType.pdtb, (TaskType.sequence_classification, TaskType.span_detection)),
     (DatasetType.reco, (TaskType.chain_classification,)),
     (DatasetType.semeval, (TaskType.sequence_classification,)),

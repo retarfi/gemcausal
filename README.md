@@ -14,11 +14,11 @@ Generator or Encoder Model for Causal tasks
 
 ## Available Tasks
 
-|      Task \ Domain      | <div style="text-align: center;">General</div>                                                                                                                                                                                                                                                                                                                                                                                                                                                 | Financial | Financial & Multilingual (Japanese) |
-| :---------------------: | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :-------: | :---------------------------------: |
-| Sequence Classification | 5 tasks from [UniCausal](https://github.com/tanfiona/UniCausal):<br><ul><li>[AltLex](https://github.com/chridey/altlex)</li><li>[CTB (CausalTimeBank)](https://github.com/paramitamirza/Causal-TimeBank)</li><li>[ESL (EventStoryLine V1.0)](https://github.com/tommasoc80/EventStoryLine)</li><li>[PDTB (Penn Discourse Treebank V3.0)](https://catalog.ldc.upenn.edu/LDC2019T05)</li><li>[SemEval (SemEval 2010 Task 8)](https://semeval2.fbk.eu/semeval2.php?location=tasks&taskid=11)</li> |    TBA    |                 TBA                 |
-|     Span Detection      | 2 tasks from [UniCausal](https://github.com/tanfiona/UniCausal):<br><ul><li>[AltLex](https://github.com/chridey/altlex)</li><li>[PDTB (Penn Discourse Treebank V3.0)](https://catalog.ldc.upenn.edu/LDC2019T05)</li>                                                                                                                                                                                                                                                                           |    TBA    |                 TBA                 |
-|  Chain Classification   | <div style="text-align: center;">[ReCo](https://github.com/waste-wood/reco)</div>                                                                                                                                                                                                                                                                                                                                                                                                              |    TBA    |                 TBA                 |
+|      Task \ Domain      | <div style="text-align: center;">General</div>                                                                                                                                                                                                                                                                                                                                                                                                                                                 |                                      Financial                                      | Financial & Multilingual (Japanese) |
+| :---------------------: | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------: | :---------------------------------: |
+| Sequence Classification | 5 tasks from [UniCausal](https://github.com/tanfiona/UniCausal):<br><ul><li>[AltLex](https://github.com/chridey/altlex)</li><li>[CTB (CausalTimeBank)](https://github.com/paramitamirza/Causal-TimeBank)</li><li>[ESL (EventStoryLine V1.0)](https://github.com/tommasoc80/EventStoryLine)</li><li>[PDTB (Penn Discourse Treebank V3.0)](https://catalog.ldc.upenn.edu/LDC2019T05)</li><li>[SemEval (SemEval 2010 Task 8)](https://semeval2.fbk.eu/semeval2.php?location=tasks&taskid=11)</li> | [FinCausal 2020](https://github.com/yseop/YseopLab/tree/develop/FNP_2020_FinCausal) |                 Financial Results & Nikkei News (Not publicly available, [paper in Japanese](https://www.anlp.jp/proceedings/annual_meeting/2023/pdf_dir/D11-3.pdf))                 |
+|     Span Detection      | 2 tasks from [UniCausal](https://github.com/tanfiona/UniCausal):<br><ul><li>[AltLex](https://github.com/chridey/altlex)</li><li>[PDTB (Penn Discourse Treebank V3.0)](https://catalog.ldc.upenn.edu/LDC2019T05)</li>                                                                                                                                                                                                                                                                           | [FinCausal 2020](https://github.com/yseop/YseopLab/tree/develop/FNP_2020_FinCausal) |                 Financial Results (Not publicly available, [paper in Japanese](https://search.ieice.org/bin/summary.php?id=j98-d_5_811))                 |
+|  Chain Classification   | <div style="text-align: center;">[ReCo](https://github.com/waste-wood/reco)</div>                                                                                                                                                                                                                                                                                                                                                                                                              |                                         TBA                                         |                 TBA                 |
 
 ## Quick Start
 
@@ -31,6 +31,7 @@ poetry add torch --source torch_cu117
 ```
 
 ### Run Evaluation
+
 See the Available Tasks table for available `--task_type` and `--dataset_type` combinations.
 
 When using OpenAI API:
@@ -39,7 +40,7 @@ When using OpenAI API:
 OPENAI_API_KEY=XXX poetry run python main.py \
 openai \
 --task_type <sequence_classification|span_detection|chain_classification> \
---dataset_type <altlex|ctb|esl|semeval|pdtb> \
+--dataset_type <altlex|ctb|esl|fincausal|pdtb|reco|semeval> \
 --data_dir data/ \
 --test_samples 200 \
 --output_dir materials/result/ \
@@ -54,7 +55,7 @@ When using a HuggingFace encoder model:
 poetry run python main.py \
 hf-encoder \
 --task_type <sequence_classification|span_detection|chain_classification> \
---dataset_type <altlex|ctb|esl|semeval|pdtb> \
+--dataset_type <altlex|ctb|esl|fincausal|pdtb|reco|semeval> \
 --data_dir data/ \
 --test_samples 200 \
 --output_dir materials/result/ \
@@ -66,6 +67,7 @@ hf-encoder \
 ```
 
 ## Data Preprocessing
+
 For download and preprocess information, see [data/README.md](data/README.md)
 
 ## Number of Examples
@@ -115,6 +117,15 @@ For sequence classification and span detection:
       <td style="text-align: center;">-</td>
       <td style="text-align: center;">-</td>
       <td style="text-align: center;">-</td>
+    </tr>
+    <tr>
+      <td style="text-align: center;">FinCausal</td>
+      <td style="text-align: center;">17060</td>
+      <td style="text-align: center;">2133</td>
+      <td style="text-align: center;">2133</td>
+      <td style="text-align: center;">1087</td>
+      <td style="text-align: center;">136</td>
+      <td style="text-align: center;">136</td>
     </tr>
     <tr>
       <td style="text-align: center;">PDTB</td>
