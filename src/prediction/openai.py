@@ -144,7 +144,7 @@ def predict(args: Namespace) -> None:
             if shot > 0:
                 prompt += annotation
             prompt += template["question"] + template["format_text"].format(
-                dsd_icl[i]["text"], " / ".join(dsd_icl[i]["tokens"])
+                example["text"], " / ".join(example["tokens"])
             )
             example["prompt"] = prompt
             return example
@@ -221,6 +221,15 @@ def predict(args: Namespace) -> None:
                 )
             ]
             example["pred"] = lst_pred_tags
+            num_pred: int = len(example["pred"])
+            num_tags: int = len(example["tags"])
+            if num_pred < num_tags:
+                example["pred"] += [""] * (num_tags - num_pred)
+            elif num_pred > num_tags:
+                example["pred"] = example["pred"][:num_pred]
+            assert len(example["pred"]) == len(
+                example["tags"]
+            ), f"Inconsistent numbers: {example}"
             return example
 
         ds_output = ds_test.map(extract_label)
