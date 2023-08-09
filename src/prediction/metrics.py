@@ -1,4 +1,7 @@
+from typing import Dict, List
+
 import evaluate
+from sklearn.metrics import confusion_matrix
 
 
 def compute(self, predictions=None, references=None, **kwargs):
@@ -18,7 +21,7 @@ def compute(self, predictions=None, references=None, **kwargs):
         - Dictionary with the results if this evaluation module is run on the main process (``process_id == 0``).
         - None if the evaluation module is not run on the main process (``process_id != 0``).
     """
-    results = []
+    results: List[Dict[str, float]] = []
 
     for module_names, evaluation_module in zip(
         self.evaluation_module_names, self.evaluation_modules
@@ -28,7 +31,14 @@ def compute(self, predictions=None, references=None, **kwargs):
         if module_names in ("f1", "precision", "recall"):
             lst += ["average"]
         batch = {input_name: batch[input_name] for input_name in lst}
-        results.append(evaluation_module.compute(**batch))
+        result: Dict[str, float] = evaluation_module.compute(**batch)
+        if module_names == "accuracy":
+            arr = confusion_matrix(
+                y_true=references, y_pred=predictions, normalize="true"
+            )
+            for i in range(len(arr)):
+                result[f"accuracy_{i}"] = arr[i, i]
+        results.append(result)
 
     return self._merge_results(results)
 

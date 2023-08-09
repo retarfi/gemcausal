@@ -4,13 +4,17 @@ import json
 import os
 import random
 from argparse import Namespace
-from typing import Any, Union
+from typing import Any, Dict, Union
 
 import datasets
 import numpy as np
 import openai
 from datasets import Dataset, DatasetDict
-from sklearn.metrics import accuracy_score, precision_recall_fscore_support
+from sklearn.metrics import (
+    accuracy_score,
+    confusion_matrix,
+    precision_recall_fscore_support,
+)
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 from tqdm import tqdm
 
@@ -75,12 +79,16 @@ def compute_metrics(
         recall = recall[0]
     if not isinstance(f1, float):
         f1 = f1[0]
-    return {
+    result: Dict[str, float] = {
         "accuracy": accuracy_score(y_true, y_pred),
         "f1": f1,
         "precision": precision,
         "recall": recall,
     }
+    arr = confusion_matrix(y_true, y_pred, normalize="true")
+    for i in range(len(arr)):
+        result[f"accuracy_{i}"] = arr[i, i]
+    return result
 
 
 def predict(args: Namespace) -> None:
