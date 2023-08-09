@@ -24,6 +24,7 @@ def load_data(
     ds_test: Dataset
     if dataset_enum in (
         DatasetType.altlex,
+        DatasetType.because,
         DatasetType.ctb,
         DatasetType.esl,
         DatasetType.pdtb,

@@ -12,8 +12,10 @@ THIS_DIR: str = os.path.dirname(os.path.abspath(__file__))
 @pytest.mark.parametrize(
     "task_type, dataset_type",
     [
+        ("sequence_classification", "because"),
         ("sequence_classification", "fincausal"),
         ("sequence_classification", "pdtb"),
+        ("span_detection", "because"),
         ("span_detection", "fincausal"),
         ("span_detection", "pdtb"),
         ("chain_classification", "reco"),

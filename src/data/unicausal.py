@@ -79,7 +79,24 @@ def _load_data_unicausal_span_detection(data_path: str) -> Dataset:
 def load_data_unicausal(
     dataset_enum: Enum, task_enum: Enum, data_dir: str, seed: int
 ) -> tuple[Dataset, Dataset, Dataset]:
-    if dataset_enum == DatasetType.pdtb:
+    if dataset_enum == DatasetType.because:
+        data_path: str = os.path.join(data_dir, "because.csv")
+        ds: Dataset
+        if task_enum == TaskType.sequence_classification:
+            ds = _load_data_unicausal_sequence_classification(data_path)
+        elif task_enum == TaskType.span_detection:
+            ds = _load_data_unicausal_span_detection(data_path)
+        else:  # pragma: no cover
+            raise NotImplementedError()
+        test_ptn: re.Pattern = re.compile(r"wsj_(00|01|22|23|24).+")
+        ds_test = ds.filter(
+            lambda x: test_ptn.match(x["doc_id"]) or x["doc_id"] == "Article247_327.ann"
+        )
+        ds_train_val = ds.filter(
+            lambda x: not test_ptn.match(x["doc_id"])
+            and x["doc_id"] != "Article247_327.ann"
+        )
+    elif dataset_enum == DatasetType.pdtb:
         data_path: str = os.path.join(data_dir, "pdtb.csv")
         ds: Dataset
         if task_enum == TaskType.sequence_classification:

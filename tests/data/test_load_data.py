@@ -18,6 +18,8 @@ THIS_DIR: str = os.path.dirname(os.path.abspath(__file__))
     [
         ("sequence_classification", "altlex", None, 462, 115, 401, does_not_raise()),
         ("span_detection", "altlex", 300, 221, 55, 100, does_not_raise()),
+        ("sequence_classification", "because", None, 852, 51, 51, does_not_raise()),
+        ("span_detection", "because", None, 475, 33, 33, does_not_raise()),
         ("sequence_classification", "ctb", None, 1569, 316, 316, does_not_raise()),
         ("sequence_classification", "esl", None, 1768, 232, 232, does_not_raise()),
         (
@@ -25,7 +27,7 @@ THIS_DIR: str = os.path.dirname(os.path.abspath(__file__))
             "fincausal",
             None,
             17060,
-            2133,
+            2132,
             2133,
             does_not_raise(),
         ),

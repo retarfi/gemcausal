@@ -4,6 +4,7 @@ DatasetType: EnumMeta = Enum(
     "Dataset",
     (
         "altlex",
+        "because",
         "ctb",
         "esl",
         "fincausal",
@@ -19,6 +20,7 @@ TaskType: EnumMeta = Enum(
 )
 DatasetTaskPairs: tuple[tuple[Enum, tuple[Enum]]] = (
     (DatasetType.altlex, (TaskType.sequence_classification, TaskType.span_detection)),
+    (DatasetType.because, (TaskType.sequence_classification, TaskType.span_detection)),
     (DatasetType.ctb, (TaskType.sequence_classification,)),
     (DatasetType.esl, (TaskType.sequence_classification,)),
     (
