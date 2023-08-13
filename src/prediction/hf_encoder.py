@@ -173,6 +173,7 @@ def predict(args: Namespace) -> None:
     train_batch_size: int = args.train_batch_size
     eval_batch_size: int = args.eval_batch_size
     max_epochs: int = args.max_epochs
+    filter_num_sent: str = args.filter_num_sent
 
     assert_dataset_task_pair(
         dataset_enum=DatasetType[dataset_type], task_enum=TaskType[task_type]
@@ -183,6 +184,7 @@ def predict(args: Namespace) -> None:
         data_dir=args.data_dir,
         test_samples=args.test_samples,
         seed=seed,
+        filter_num_sent=filter_num_sent,
     )
     tokenizer: PreTrainedTokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
 

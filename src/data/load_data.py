@@ -17,6 +17,7 @@ def load_data(
     data_dir: str,
     test_samples: Optional[int] = None,
     seed: int = 42,
+    filter_num_sent: Optional[str] = None,
 ) -> DatasetDict:
     assert_dataset_task_pair(dataset_enum=dataset_enum, task_enum=task_enum)
     ds_train: Dataset
@@ -31,11 +32,18 @@ def load_data(
         DatasetType.semeval,
     ):
         ds_train, ds_valid, ds_test = load_data_unicausal(
-            dataset_enum=dataset_enum, task_enum=task_enum, data_dir=data_dir, seed=seed
+            dataset_enum=dataset_enum,
+            task_enum=task_enum,
+            data_dir=data_dir,
+            seed=seed,
+            filter_num_sent=filter_num_sent,
         )
     elif dataset_enum == DatasetType.fincausal:
         ds_train, ds_valid, ds_test = load_data_fincausal(
-            task_enum=task_enum, data_dir=data_dir, seed=seed
+            task_enum=task_enum,
+            data_dir=data_dir,
+            seed=seed,
+            filter_num_sent=filter_num_sent,
         )
     elif dataset_enum in (DatasetType.jpfinresults, DatasetType.jpnikkei):
         ds_train, ds_valid, ds_test = load_data_jpfin(

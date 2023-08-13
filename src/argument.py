@@ -26,6 +26,12 @@ def add_argument_common(parser: ArgumentParser) -> None:
         required=True,
         help="Output directory for json and csv (OpenAI model) ",
     )
+    parser.add_argument(
+        "--filter_num_sent",
+        choices=["intra", "inter"],
+        default=None,
+        help="If specified, split examples according to whether the sequence crosses over two or more sentences",
+    )
 
 
 def add_argument_hf_encoder(parser: ArgumentParser) -> None:
