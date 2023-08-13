@@ -32,6 +32,12 @@ def add_argument_common(parser: ArgumentParser) -> None:
         default=None,
         help="If specified, split examples according to whether the sequence crosses over two or more sentences",
     )
+    parser.add_argument(
+        "--filter_num_causal",
+        choices=["single", "multi"],
+        default=None,
+        help="If specified, split examples according to whether the sequence has multiple causal relations",
+    )
 
 
 def add_argument_hf_encoder(parser: ArgumentParser) -> None:

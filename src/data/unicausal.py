@@ -1,6 +1,6 @@
 import os
 import re
-from typing import Any, Optional
+from typing import Any, Optional, Union
 from enum import Enum
 
 import pandas as pd
@@ -60,6 +60,17 @@ def get_bio_for_datasets(example: dict[str, Any]) -> dict[str, Any]:
     return example
 
 
+def custom_agg(group: Any) -> pd.Series:
+    result: dict[str, Union[str, int]] = {}
+    for col in group.columns:
+        if col == "text_w_pairs":
+            # TODO: Integrate multiple causality tags. And handle nested tags separately.
+            result[col] = group[col].iloc[0]
+        else:
+            result[col] = group[col].iloc[0]
+    return pd.Series(result)
+
+
 def _filter_data_by_num_sent(
     dataset_enum: Enum, ds: Dataset, filter_num_sent: Optional[str] = None
 ) -> Dataset:
@@ -80,6 +91,23 @@ def _filter_data_by_num_sent(
     return ds
 
 
+def _filter_data_by_num_causal(
+    dataset_enum: Enum, df: pd.DataFrame, filter_num_causal: Optional[str] = None
+) -> pd.DataFrame:
+    if filter_num_causal == "single":
+        df = df[~df.duplicated(subset=["corpus", "doc_id", "sent_id"], keep=False)]
+    elif filter_num_causal == "multi":
+        df = df[df.duplicated(subset=["corpus", "doc_id", "sent_id"], keep=False)]
+        groups = df.groupby(["corpus", "doc_id", "sent_id"])
+        df = groups.apply(custom_agg).reset_index(drop=True)
+    elif filter_num_causal is None:
+        groups = df.groupby(["corpus", "doc_id", "sent_id"])
+        df = groups.apply(custom_agg).reset_index(drop=True)
+    else:  # pragma: no cover
+        raise NotImplementedError()
+    return df
+
+
 def _load_data_unicausal_sequence_classification(
     dataset_enum: Enum, data_path: str, filter_num_sent: Optional[str] = None
 ) -> Dataset:
@@ -91,11 +119,14 @@ def _load_data_unicausal_sequence_classification(
 
 
 def _load_data_unicausal_span_detection(
-    dataset_enum: Enum, data_path: str, filter_num_sent: Optional[str] = None
+    dataset_enum: Enum,
+    data_path: str,
+    filter_num_sent: Optional[str] = None,
+    filter_num_causal: Optional[str] = None,
 ) -> Dataset:
     df: pd.DataFrame = pd.read_csv(data_path)
-    df.drop_duplicates(subset=["corpus", "doc_id", "sent_id"], keep=False, inplace=True)
-    df = df[df.seq_label == 1]
+    df = df[df.pair_label == 1]
+    df = _filter_data_by_num_causal(dataset_enum, df, filter_num_causal)
     ds = Dataset.from_pandas(df)
     ds = ds.map(get_bio_for_datasets)
     ds = _filter_data_by_num_sent(dataset_enum, ds, filter_num_sent)
@@ -108,6 +139,7 @@ def load_data_unicausal(
     data_dir: str,
     seed: int,
     filter_num_sent: Optional[str] = None,
+    filter_num_causal: Optional[str] = None,
 ) -> tuple[Dataset, Dataset, Dataset]:
     if dataset_enum == DatasetType.because:
         data_path: str = os.path.join(data_dir, "because.csv")
@@ -118,7 +150,7 @@ def load_data_unicausal(
             )
         elif task_enum == TaskType.span_detection:
             ds = _load_data_unicausal_span_detection(
-                dataset_enum, data_path, filter_num_sent
+                dataset_enum, data_path, filter_num_sent, filter_num_causal
             )
         else:  # pragma: no cover
             raise NotImplementedError()
@@ -139,7 +171,7 @@ def load_data_unicausal(
             )
         elif task_enum == TaskType.span_detection:
             ds = _load_data_unicausal_span_detection(
-                dataset_enum, data_path, filter_num_sent
+                dataset_enum, data_path, filter_num_sent, filter_num_causal
             )
         else:  # pragma: no cover
             raise NotImplementedError()
@@ -174,10 +206,10 @@ def load_data_unicausal(
             ds_test = cast_column_to_int(ds_test, "labels")
         elif task_enum == TaskType.span_detection:
             ds_train_val = _load_data_unicausal_span_detection(
-                dataset_enum, train_val_data_path, filter_num_sent
+                dataset_enum, train_val_data_path, filter_num_sent, filter_num_causal
             )
             ds_test = _load_data_unicausal_span_detection(
-                dataset_enum, test_data_path, filter_num_sent
+                dataset_enum, test_data_path, filter_num_sent, filter_num_causal
             )
         else:  # pragma: no cover
             raise NotImplementedError()
