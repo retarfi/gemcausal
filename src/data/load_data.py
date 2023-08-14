@@ -4,7 +4,6 @@ from typing import Optional
 
 from datasets import Dataset, DatasetDict
 
-from .cpsts import load_cpsts_dataset
 from .fincausal import load_data_fincausal
 from .japanese import load_data_jpfin
 from .unicausal import load_data_unicausal
