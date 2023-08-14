@@ -1,6 +1,6 @@
 import os
 from enum import Enum
-from typing import Any
+from typing import Any, Optional
 
 import nltk
 import pandas as pd
@@ -10,8 +10,25 @@ from .. import TaskType
 from .split_dataset import split_train_valid_test_dataset
 
 
+def _filter_data_by_num_sent(
+    ds: Dataset, filter_num_sent: Optional[str] = None
+) -> Dataset:
+    if filter_num_sent == "intra":
+        ds = ds.filter(lambda x: len(nltk.sent_tokenize(x["Text"])) == 1)
+    elif filter_num_sent == "inter":
+        ds = ds.filter(lambda x: len(nltk.sent_tokenize(x["Text"])) >= 2)
+    elif filter_num_sent is None:
+        pass
+    else:  # pragma: no cover
+        raise NotImplementedError()
+    return ds
+
+
 def load_data_fincausal(
-    task_enum: Enum, data_dir: str, seed: int
+    task_enum: Enum,
+    data_dir: str,
+    seed: int,
+    filter_num_sent: Optional[str] = None,
 ) -> tuple[Dataset, Dataset, Dataset]:
     csv_prefix: str = "fnp2020-fincausal"
     task_id: int
@@ -37,9 +54,11 @@ def load_data_fincausal(
     ds: Dataset
     if task_enum == TaskType.sequence_classification:
         ds = Dataset.from_pandas(df.drop_duplicates(subset=["Text"]))
+        ds = _filter_data_by_num_sent(ds, filter_num_sent)
         ds = ds.rename_columns({"Text": "text", "Gold": "labels"})
     elif task_enum == TaskType.span_detection:
         ds = Dataset.from_pandas(df.drop_duplicates(subset=["Text"], keep=False))
+        ds = _filter_data_by_num_sent(ds, filter_num_sent)
         nltk.download("punkt")
 
         def tokenize_by_word(example: dict[str, Any]) -> dict[str, Any]:

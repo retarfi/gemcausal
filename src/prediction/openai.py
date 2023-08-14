@@ -99,6 +99,8 @@ def predict(args: Namespace) -> None:
     shot: int = args.shot
     output_dir: str = args.output_dir
     seed: int = args.seed
+    filter_num_sent: str = args.filter_num_sent
+    filter_num_causal: str = args.filter_num_causal
 
     os.makedirs(output_dir, exist_ok=True)
     template: dict[str, str] = read_template(args.template)
@@ -112,6 +114,8 @@ def predict(args: Namespace) -> None:
         data_dir=args.data_dir,
         test_samples=args.test_samples,
         seed=seed,
+        filter_num_sent=filter_num_sent,
+        filter_num_causal=filter_num_causal,
     )
     random.seed(seed)
     dsd_icl: Dataset = dsd["train"].select(
