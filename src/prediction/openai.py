@@ -218,7 +218,7 @@ def predict(args: Namespace) -> None:
 
         # output prompt result
         ds_output = ds_output.remove_columns(
-            list(set(ds_test.column_names) - {"labels", "output", "pred"})
+            list(set(ds_test.column_names) - {"example_id", "labels", "output", "pred"})
         )
     elif TaskType[task_type] == TaskType.span_detection:
 
@@ -257,7 +257,7 @@ def predict(args: Namespace) -> None:
         ds_output = ds_output.remove_columns(
             list(
                 set(ds_test.column_names)
-                - {"text", "tokens", "tags", "output", "pred", "pred_asis"}
+                - {"example_id", "text", "tokens", "tags", "output", "pred", "pred_asis"}
             )
         )
 
@@ -269,6 +269,7 @@ def predict(args: Namespace) -> None:
                 for j in range(len(example["tokens"][i])):
                     lst.append(
                         {
+                            "example_id": example["example_id"][i],
                             "text": example["text"][i],
                             "token": example["tokens"][i][j],
                             "tag": example["tags"][i][j],

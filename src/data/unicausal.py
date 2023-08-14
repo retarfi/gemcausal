@@ -113,7 +113,7 @@ def _load_data_unicausal_sequence_classification(
 ) -> Dataset:
     ds = load_dataset("csv", data_files=data_path, split="train")
     ds = ds.filter(lambda x: x["eg_id"] == 0)
-    ds = ds.rename_column("seq_label", "labels")
+    ds = ds.rename_columns({"seq_label": "labels", "eg_id": "example_id"})
     ds = _filter_data_by_num_sent(dataset_enum, ds, filter_num_sent)
     return ds
 
@@ -129,6 +129,7 @@ def _load_data_unicausal_span_detection(
     df = _filter_data_by_num_causal(dataset_enum, df, filter_num_causal)
     ds = Dataset.from_pandas(df)
     ds = ds.map(get_bio_for_datasets)
+    ds = ds.rename_column("eg_id", "example_id")
     ds = _filter_data_by_num_sent(dataset_enum, ds, filter_num_sent)
     return ds
 

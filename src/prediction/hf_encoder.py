@@ -48,7 +48,8 @@ def preprocess_for_sequence_classification(
             max_length=max_length,
             padding="max_length",
             truncation=True,
-        )
+        ),
+        remove_columns="example_id",
     )
     return dsd, config
 
