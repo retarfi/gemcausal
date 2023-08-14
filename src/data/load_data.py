@@ -4,6 +4,7 @@ from typing import Optional
 
 from datasets import Dataset, DatasetDict
 
+from .cpsts import load_cpsts_dataset
 from .fincausal import load_data_fincausal
 from .japanese import load_data_jpfin
 from .unicausal import load_data_unicausal
@@ -69,12 +70,12 @@ def load_data(
     for key, ds_ in dsd.items():
         set_columns: set[str]
         if task_enum == TaskType.sequence_classification:
-            set_columns = {"text", "labels"}
+            set_columns = {"example_id", "text", "labels"}
         elif task_enum == TaskType.span_detection:
-            set_columns = {"text", "tokens", "tags"}
+            set_columns = {"example_id", "text", "tokens", "tags"}
         elif task_enum == TaskType.chain_classification:
             if dataset_enum == DatasetType.reco:
-                set_columns = {"events", "short_contexts", "labels"}
+                set_columns = {"example_id", "events", "short_contexts", "labels"}
         else:  # pragma: no cover
             raise NotImplementedError()
         dsd[key] = ds_.remove_columns(list(set(ds_.column_names) - set_columns))

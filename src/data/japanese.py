@@ -16,6 +16,7 @@ def load_and_process_span_jpfinresults(fileprefix: str, data_dir: str) -> Datase
         orient="records",
         lines=True,
     )
+    df["example_id"] = [f"kessan_{fileprefix}_{i}" for i in range(len(df))]
     ds: Dataset = Dataset.from_pandas(df)
     # TODO: nested
     ds = ds.filter(lambda example: "<c2>" not in example["tagged_sentence"])
@@ -63,19 +64,23 @@ def load_data_jpfin(
     ds_test: Dataset
     if task_enum == TaskType.sequence_classification:
         tsv_filename: str
+        index_prefix: str
         if dataset_enum == DatasetType.jpfinresults:
             tsv_filename = "kessan_data_for_classify.tsv"
+            index_prefix = "kessan_"
         elif dataset_enum == DatasetType.jpnikkei:
             tsv_filename = "nikkei_data.tsv"
+            index_prefix = "nikkei_"
         else:  # pragma: no cover
             raise NotImplementedError()
         df: pd.DataFrame = pd.read_csv(
             os.path.join(data_dir, tsv_filename),
             sep="\t",
             header=0,
-            names=["labels", "index", "text"],
+            names=["labels", "example_id", "text"],
         )
-        ds: Dataset = Dataset.from_pandas(df.drop(columns=["index"]))
+        df["example_id"] = df["example_id"].map(lambda x: index_prefix + x)
+        ds: Dataset = Dataset.from_pandas(df)
         ds_train, ds_valid, ds_test = split_train_valid_test_dataset(ds, seed)
     elif task_enum == TaskType.span_detection:
         if dataset_enum == DatasetType.jpfinresults:

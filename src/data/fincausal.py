@@ -22,18 +22,18 @@ def load_data_fincausal(
     else:  # pragma: no cover
         raise NotImplementedError()
     # load trial (fincausal-) and practice (fincausal2-) data
-    df: pd.DataFrame = pd.concat(
-        [
-            pd.read_csv(
-                os.path.join(data_dir, f"{csv_prefix}{x}-task{task_id}.csv"),
-                sep="; ",
-                engine="python",
-            )
-            for x in ["", "2"]
-        ]
-    )
+    lst_df: list[pd.DataFrame] = []
+    for x in ["", "2"]:
+        df_: pd.DataFrame = pd.read_csv(
+            os.path.join(data_dir, f"{csv_prefix}{x}-task{task_id}.csv"),
+            sep="; ",
+            engine="python",
+        )
+        df_["Index"] = df_["Index"].map(lambda y: f"fincausal{x}_{y}")
+        lst_df.append(df_)
+    df: pd.DataFrame = pd.concat(lst_df)
     df.dropna(subset=["Text"], inplace=True)
-    df.drop(columns=["Index"], inplace=True)
+    df.rename(columns={"Index": "example_id"}, inplace=True)
     ds: Dataset
     if task_enum == TaskType.sequence_classification:
         ds = Dataset.from_pandas(df.drop_duplicates(subset=["Text"]))

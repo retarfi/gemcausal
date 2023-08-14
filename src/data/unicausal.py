@@ -63,7 +63,7 @@ def get_bio_for_datasets(example: dict[str, Any]) -> dict[str, Any]:
 def _load_data_unicausal_sequence_classification(data_path: str) -> Dataset:
     ds = load_dataset("csv", data_files=data_path, split="train")
     ds = ds.filter(lambda x: x["eg_id"] == 0)
-    ds = ds.rename_column("seq_label", "labels")
+    ds = ds.rename_columns({"seq_label": "labels", "eg_id": "example_id"})
     return ds
 
 
@@ -73,6 +73,7 @@ def _load_data_unicausal_span_detection(data_path: str) -> Dataset:
     df = df[df.seq_label == 1]
     ds = Dataset.from_pandas(df)
     ds = ds.map(get_bio_for_datasets)
+    ds = ds.rename_column("eg_id", "example_id")
     return ds
 
 

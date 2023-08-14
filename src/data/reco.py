@@ -28,6 +28,7 @@ def load_reco_dataset(json_path: str) -> Dataset:
                 label = 1
             data.append(
                 {
+                    "example_id": "reco_{}_{}".format(instance["index"], i),
                     "events": instance["events"][i : i + 3],
                     "short_contexts": instance["short_contexts"][i : i + 2],
                     "labels": label,
