@@ -26,7 +26,7 @@ Generator or Encoder Model for Causal tasks
 
 ```sh
 poetry lock
-poetry install
+poetry install --without torch
 poetry add torch --source torch_cu117
 ```
 
