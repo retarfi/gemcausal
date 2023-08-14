@@ -257,7 +257,15 @@ def predict(args: Namespace) -> None:
         ds_output = ds_output.remove_columns(
             list(
                 set(ds_test.column_names)
-                - {"example_id", "text", "tokens", "tags", "output", "pred", "pred_asis"}
+                - {
+                    "example_id",
+                    "text",
+                    "tokens",
+                    "tags",
+                    "output",
+                    "pred",
+                    "pred_asis",
+                }
             )
         )
 

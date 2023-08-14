@@ -74,11 +74,10 @@ def custom_agg(group: Any) -> pd.Series:
 def _filter_data_by_num_sent(
     dataset_enum: Enum, ds: Dataset, filter_num_sent: Optional[str] = None
 ) -> Dataset:
-    if dataset_enum in (
-        DatasetType.altlex,
-        DatasetType.because,
-        DatasetType.semeval,
-    ) and filter_num_sent is not None:
+    if (
+        dataset_enum in (DatasetType.altlex, DatasetType.because, DatasetType.semeval)
+        and filter_num_sent is not None
+    ):
         raise ValueError(f"filter_num_sent is not supported for {dataset_enum}")
     if filter_num_sent == "intra":
         ds = ds.filter(lambda x: x["num_sents"] == 1)

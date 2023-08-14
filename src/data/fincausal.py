@@ -25,10 +25,7 @@ def _filter_data_by_num_sent(
 
 
 def load_data_fincausal(
-    task_enum: Enum,
-    data_dir: str,
-    seed: int,
-    filter_num_sent: Optional[str] = None,
+    task_enum: Enum, data_dir: str, seed: int, filter_num_sent: Optional[str] = None
 ) -> tuple[Dataset, Dataset, Dataset]:
     csv_prefix: str = "fnp2020-fincausal"
     task_id: int
