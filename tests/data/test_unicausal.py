@@ -45,6 +45,7 @@ def test_get_bio_for_datasets() -> None:
         **{
             "tokens": ["This", "pencil", "makes", "me", "very", "mad."],
             "tags": ["B-C", "I-C", "O", "O", "B-E", "I-E"],
+            "tagged_text": "<c>This pencil</c> makes me <e>very mad</e>.",
         },
     }
     assert get_bio_for_datasets(dct_input) == dct_expected

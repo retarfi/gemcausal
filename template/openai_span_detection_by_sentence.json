@@ -1,0 +1,7 @@
+{
+    "task_description": "Please perform a causal span detection according to the following rules\n1. Please insert <c> before the word where the cause clause begins and </c> after the word where the clause ends.\n2. Please insert <e> before the word where the result clause begins and </e> after the word where the clause ends.\n3. If there are multiple pairs of cause and result, use the tags <c1>, </c1>, <e1>, </e1> for the first pair, <c2>, </c2>, <e2>, </e2> for the second pair, and <c3>, </c3>, <e3>, </e3> for the third pair, with numbers added to the tags.",
+    "header_example": "Annotation Examples:\n",
+    "format_text": "Text: {}\n",
+    "format_class": "Text with tags: \n{}\n",
+    "question": "According to the policy above, please add the appropriate tags in the following text.\n"
+}

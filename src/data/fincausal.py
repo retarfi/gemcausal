@@ -1,23 +1,23 @@
 import os
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 import nltk
 import pandas as pd
-from datasets import Dataset, DatasetDict
+from datasets import Dataset
 
-from .. import TaskType
+from .. import SentenceType, SpanTags, TaskType
 from .split_dataset import split_train_valid_test_dataset
 
+nltk.download("punkt")
 
-def _filter_data_by_num_sent(
-    ds: Dataset, filter_num_sent: Optional[str] = None
-) -> Dataset:
-    if filter_num_sent == "intra":
+
+def _filter_data_by_num_sent(ds: Dataset, sentencetype_enum: Enum) -> Dataset:
+    if sentencetype_enum == SentenceType.intra:
         ds = ds.filter(lambda x: len(nltk.sent_tokenize(x["Text"])) == 1)
-    elif filter_num_sent == "inter":
+    elif sentencetype_enum == SentenceType.inter:
         ds = ds.filter(lambda x: len(nltk.sent_tokenize(x["Text"])) >= 2)
-    elif filter_num_sent is None:
+    elif sentencetype_enum == SentenceType.all:
         pass
     else:  # pragma: no cover
         raise NotImplementedError()
@@ -25,7 +25,7 @@ def _filter_data_by_num_sent(
 
 
 def load_data_fincausal(
-    task_enum: Enum, data_dir: str, seed: int, filter_num_sent: Optional[str] = None
+    task_enum: Enum, data_dir: str, sentencetype_enum: Enum, seed: int
 ) -> tuple[Dataset, Dataset, Dataset]:
     csv_prefix: str = "fnp2020-fincausal"
     task_id: int
@@ -51,12 +51,11 @@ def load_data_fincausal(
     ds: Dataset
     if task_enum == TaskType.sequence_classification:
         ds = Dataset.from_pandas(df.drop_duplicates(subset=["Text"]))
-        ds = _filter_data_by_num_sent(ds, filter_num_sent)
+        ds = _filter_data_by_num_sent(ds, sentencetype_enum)
         ds = ds.rename_columns({"Text": "text", "Gold": "labels"})
     elif task_enum == TaskType.span_detection:
         ds = Dataset.from_pandas(df.drop_duplicates(subset=["Text"], keep=False))
-        ds = _filter_data_by_num_sent(ds, filter_num_sent)
-        nltk.download("punkt")
+        ds = _filter_data_by_num_sent(ds, sentencetype_enum)
 
         def tokenize_by_word(example: dict[str, Any]) -> dict[str, Any]:
             example["tokens"] = nltk.tokenize.word_tokenize(example["Text"])
@@ -82,6 +81,13 @@ def load_data_fincausal(
                     tags.append("O")
                     idx += 1
             example["tags"] = tags
+            example["tagged_text"] = (
+                example["Sentence"]
+                .replace("<e1>", SpanTags.cause_begin)
+                .replace("</e1>", SpanTags.cause_end)
+                .replace("<e2>", SpanTags.effect_begin)
+                .replace("</e2>", SpanTags.effect_end)
+            )
             return example
 
         ds = ds.map(tokenize_by_word)

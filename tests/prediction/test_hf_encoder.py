@@ -10,18 +10,26 @@ THIS_DIR: str = os.path.dirname(os.path.abspath(__file__))
 
 
 @pytest.mark.parametrize(
-    "task_type, dataset_type",
+    "task_type, dataset_type, num_sent, num_causal",
     [
-        ("sequence_classification", "because"),
-        ("sequence_classification", "fincausal"),
-        ("sequence_classification", "pdtb"),
-        ("span_detection", "because"),
-        ("span_detection", "fincausal"),
-        ("span_detection", "pdtb"),
-        ("chain_classification", "reco"),
+        ("sequence_classification", "because", "all", "all"),
+        ("sequence_classification", "ctb", "intra", "all"),
+        ("sequence_classification", "ctb", "inter", "all"),
+        ("sequence_classification", "fincausal", "all", "all"),
+        ("sequence_classification", "fincausal", "inter", "all"),
+        ("span_detection", "fincausal", "all", "all"),
+        ("span_detection", "fincausal", "intra", "all"),
+        ("span_detection", "fincausal", "inter", "all"),
+        ("span_detection", "pdtb", "intra", "all"),
+        ("span_detection", "pdtb", "inter", "all"),
+        ("span_detection", "pdtb", "all", "single"),
+        ("span_detection", "pdtb", "all", "multi"),
+        ("chain_classification", "reco", "all", "all"),
     ],
 )
-def test_predict(task_type: str, dataset_type: str) -> None:
+def test_predict(
+    task_type: str, dataset_type: str, num_sent: str, num_causal: str
+) -> None:
     parser = argparse.ArgumentParser()
     add_argument_common(parser)
     add_argument_hf_encoder(parser)
@@ -38,6 +46,10 @@ def test_predict(task_type: str, dataset_type: str) -> None:
             "5",
             "--output_dir",
             os.path.join(THIS_DIR, "../materials/results"),
+            "--filter_num_sent",
+            num_sent,
+            "--filter_num_causal",
+            num_causal,
             "--model_name",
             "google/bert_uncased_L-2_H-128_A-2",
             "--train_batch_size",
@@ -52,14 +64,15 @@ def test_predict(task_type: str, dataset_type: str) -> None:
 
 
 @pytest.mark.parametrize(
-    "task_type, dataset_type",
+    "task_type, dataset_type, num_causal",
     [
-        ("sequence_classification", "jpfinresults"),
-        ("sequence_classification", "jpnikkei"),
-        ("span_detection", "jpfinresults"),
+        ("sequence_classification", "jpfinresults", "all"),
+        ("sequence_classification", "jpnikkei", "all"),
+        ("span_detection", "jpfinresults", "all"),
+        ("span_detection", "jpfinresults", "multi"),
     ],
 )
-def test_predict_japanese(task_type: str, dataset_type: str) -> None:
+def test_predict_japanese(task_type: str, dataset_type: str, num_causal: str) -> None:
     parser = argparse.ArgumentParser()
     add_argument_common(parser)
     add_argument_hf_encoder(parser)
@@ -76,8 +89,12 @@ def test_predict_japanese(task_type: str, dataset_type: str) -> None:
             "5",
             "--output_dir",
             os.path.join(THIS_DIR, "../materials/results"),
+            "--filter_num_sent",
+            "all",
+            "--filter_num_causal",
+            num_causal,
             "--model_name",
-            "cl-tohoku/bert-base-japanese",
+            "izumi-lab/bert-small-japanese",
             "--train_batch_size",
             "32",
             "--eval_batch_size",

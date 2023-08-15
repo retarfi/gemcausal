@@ -1,6 +1,6 @@
 from argparse import ArgumentParser
 
-from . import DatasetType, TaskType
+from . import DatasetType, NumCausalType, SentenceType, TaskType
 from .prediction import predict_hf_encoder, predict_openai
 
 
@@ -28,15 +28,21 @@ def add_argument_common(parser: ArgumentParser) -> None:
     )
     parser.add_argument(
         "--filter_num_sent",
-        choices=["intra", "inter"],
-        default=None,
-        help="If specified, split examples according to whether the sequence crosses over two or more sentences",
+        choices=[x.name for x in SentenceType],
+        default=SentenceType.all.name,
+        help=(
+            "If specified, split examples according to whether the sequence crosses "
+            "over two or more sentences"
+        ),
     )
     parser.add_argument(
         "--filter_num_causal",
-        choices=["single", "multi"],
-        default=None,
-        help="If specified, split examples according to whether the sequence has multiple causal relations",
+        choices=[x.name for x in NumCausalType],
+        default=NumCausalType.all.name,
+        help=(
+            "If specified, split examples according to whether the sequence has "
+            "multiple causal relations"
+        ),
     )
 
 
@@ -63,7 +69,10 @@ def add_argument_openai(parser: ArgumentParser) -> None:
     parser.add_argument(
         "--evaluate_by_word",
         action="store_true",
-        help="Evaluate by words, not by sentences with exact match (only for span detection)",
+        help=(
+            "Evaluate by words, not by sentences with exact match "
+            "(only for span detection)"
+        ),
     )
 
 

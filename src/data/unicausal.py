@@ -3,10 +3,18 @@ import re
 from typing import Any, Optional, Union
 from enum import Enum
 
+import numpy as np
 import pandas as pd
 from datasets import Dataset, DatasetDict, Value, load_dataset
 
-from .. import TaskType, DatasetType
+from .. import (
+    DatasetType,
+    NumCausalType,
+    SentenceType,
+    SpanTags,
+    SpanTagsFormat,
+    TaskType,
+)
 
 
 def cast_column_to_int(ds: Dataset, column: str) -> Dataset:
@@ -57,100 +65,140 @@ def get_bio_for_datasets(example: dict[str, Any]) -> dict[str, Any]:
     tokens, tags = get_bio(example["text_w_pairs"])
     example["tokens"] = tokens
     example["tags"] = tags
+    example["tagged_text"] = (
+        example["text_w_pairs"]
+        .replace("<ARG0>", SpanTags.cause_begin)
+        .replace("</ARG0>", SpanTags.cause_end)
+        .replace("<ARG1>", SpanTags.effect_begin)
+        .replace("</ARG1>", SpanTags.effect_end)
+    )
     return example
 
 
 def custom_agg(group: Any) -> pd.Series:
-    result: dict[str, Union[str, int]] = {}
+    reg_cause: re.Pattern = re.compile(
+        f"{SpanTags.cause_begin}(.*?){SpanTags.cause_end}"
+    )
+    reg_effect: re.Pattern = re.compile(
+        f"{SpanTags.effect_begin}(.*?){SpanTags.effect_end}"
+    )
+    result: dict[str, Union[str, int, None]] = {}
     for col in group.columns:
-        if col == "text_w_pairs":
-            # TODO: Integrate multiple causality tags. And handle nested tags separately.
-            result[col] = group[col].iloc[0]
+        if col == "tagged_text":
+            text: Optional[str] = group["text"].iloc[0]
+            for i, idx in enumerate(
+                np.argsort(
+                    [
+                        -(x.find(SpanTags.cause_begin))
+                        for x in group["text_w_pairs"].tolist()
+                    ]
+                )
+            ):
+                cause: str = re.search(reg_cause, group[col].iloc[idx]).group(1)
+                effect: str = re.search(reg_effect, group[col].iloc[idx]).group(1)
+                if cause in text:
+                    text = text.replace(
+                        cause,
+                        SpanTagsFormat.cause_begin.format(i + 1)
+                        + cause
+                        + SpanTagsFormat.cause_end.format(i + 1),
+                    )
+                else:
+                    text = None
+                    break
+                if effect in text:
+                    text = text.replace(
+                        effect,
+                        SpanTagsFormat.effect_begin.format(i + 1)
+                        + effect
+                        + SpanTagsFormat.effect_end.format(i + 1),
+                    )
+                else:
+                    text = None
+                    break
+            result[col] = text
         else:
             result[col] = group[col].iloc[0]
     return pd.Series(result)
 
 
 def _filter_data_by_num_sent(
-    dataset_enum: Enum, ds: Dataset, filter_num_sent: Optional[str] = None
+    dataset_enum: Enum, ds: Dataset, sentencetype_enum: Enum
 ) -> Dataset:
     if (
         dataset_enum in (DatasetType.altlex, DatasetType.because, DatasetType.semeval)
-        and filter_num_sent is not None
+        and sentencetype_enum != SentenceType.all
     ):
         raise ValueError(f"filter_num_sent is not supported for {dataset_enum}")
-    if filter_num_sent == "intra":
+    if sentencetype_enum == SentenceType.intra:
         ds = ds.filter(lambda x: x["num_sents"] == 1)
-    elif filter_num_sent == "inter":
+    elif sentencetype_enum == SentenceType.inter:
         ds = ds.filter(lambda x: x["num_sents"] >= 2)
-    elif filter_num_sent is None:
-        pass
-    else:  # pragma: no cover
-        raise NotImplementedError()
     return ds
 
 
 def _filter_data_by_num_causal(
-    dataset_enum: Enum, df: pd.DataFrame, filter_num_causal: Optional[str] = None
-) -> pd.DataFrame:
-    if filter_num_causal == "single":
+    dataset_enum: Enum, ds: Dataset, numcausal_enum: Enum
+) -> Dataset:
+    df: pd.DataFrame = ds.to_pandas()
+    if numcausal_enum == NumCausalType.single:
         df = df[~df.duplicated(subset=["corpus", "doc_id", "sent_id"], keep=False)]
-    elif filter_num_causal == "multi":
-        df = df[df.duplicated(subset=["corpus", "doc_id", "sent_id"], keep=False)]
+    else:
+        if numcausal_enum == NumCausalType.multi:
+            df = df[df.duplicated(subset=["corpus", "doc_id", "sent_id"], keep=False)]
+        else:
+            assert numcausal_enum == NumCausalType.all
         groups = df.groupby(["corpus", "doc_id", "sent_id"])
         df = groups.apply(custom_agg).reset_index(drop=True)
-    elif filter_num_causal is None:
-        groups = df.groupby(["corpus", "doc_id", "sent_id"])
-        df = groups.apply(custom_agg).reset_index(drop=True)
-    else:  # pragma: no cover
-        raise NotImplementedError()
-    return df
+        # Drop nested causal with primitive way
+        df.dropna(subset=["tagged_text"])
+    return Dataset.from_pandas(df, preserve_index=False)
 
 
 def _load_data_unicausal_sequence_classification(
-    dataset_enum: Enum, data_path: str, filter_num_sent: Optional[str] = None
+    dataset_enum: Enum, data_path: str, sentencetype_enum: Enum
 ) -> Dataset:
     ds: Dataset = load_dataset("csv", data_files=data_path, split="train")
     ds = ds.filter(lambda x: x["eg_id"] == 0)
     ds = ds.rename_columns({"seq_label": "labels", "eg_id": "example_id"})
-    ds = _filter_data_by_num_sent(dataset_enum, ds, filter_num_sent)
+    ds = _filter_data_by_num_sent(dataset_enum, ds, sentencetype_enum)
     return ds
 
 
 def _load_data_unicausal_span_detection(
-    dataset_enum: Enum,
-    data_path: str,
-    filter_num_sent: Optional[str] = None,
-    filter_num_causal: Optional[str] = None,
+    dataset_enum: Enum, data_path: str, sentencetype_enum: Enum, numcausal_enum: Enum
 ) -> Dataset:
     df: pd.DataFrame = pd.read_csv(data_path)
     df = df[df.pair_label == 1]
-    df = _filter_data_by_num_causal(dataset_enum, df, filter_num_causal)
+    # TODO: remove if no problem
+    # if dataset_enum == DatasetType.because:
+    #     df = df[(df.doc_id != "20020731-nyt.ann") | (df.sent_id != 120)]
     ds: Dataset = Dataset.from_pandas(df)
     ds = ds.map(get_bio_for_datasets)
     ds = ds.rename_column("eg_id", "example_id")
-    ds = _filter_data_by_num_sent(dataset_enum, ds, filter_num_sent)
+    ds = _filter_data_by_num_causal(dataset_enum, ds, numcausal_enum)
+    ds = _filter_data_by_num_sent(dataset_enum, ds, sentencetype_enum)
     return ds
 
 
 def load_data_unicausal(
     dataset_enum: Enum,
     task_enum: Enum,
+    sentencetype_enum: Enum,
+    numcausal_enum: Enum,
     data_dir: str,
     seed: int,
-    filter_num_sent: Optional[str] = None,
-    filter_num_causal: Optional[str] = None,
 ) -> tuple[Dataset, Dataset, Dataset]:
     if dataset_enum == DatasetType.because:
         data_path: str = os.path.join(data_dir, "because.csv")
         ds: Dataset
         if task_enum == TaskType.sequence_classification:
             ds = _load_data_unicausal_sequence_classification(
-                dataset_enum, data_path, filter_num_sent
+                dataset_enum, data_path, sentencetype_enum
             )
         elif task_enum == TaskType.span_detection:
             ds = _load_data_unicausal_span_detection(
-                dataset_enum, data_path, filter_num_sent, filter_num_causal
+                dataset_enum, data_path, sentencetype_enum, numcausal_enum
             )
         else:  # pragma: no cover
             raise NotImplementedError()
@@ -167,11 +215,11 @@ def load_data_unicausal(
         ds: Dataset
         if task_enum == TaskType.sequence_classification:
             ds = _load_data_unicausal_sequence_classification(
-                dataset_enum, data_path, filter_num_sent
+                dataset_enum, data_path, sentencetype_enum
             )
         elif task_enum == TaskType.span_detection:
             ds = _load_data_unicausal_span_detection(
-                dataset_enum, data_path, filter_num_sent, filter_num_causal
+                dataset_enum, data_path, sentencetype_enum, numcausal_enum
             )
         else:  # pragma: no cover
             raise NotImplementedError()
@@ -197,19 +245,19 @@ def load_data_unicausal(
         ds_train_val: Dataset
         if task_enum == TaskType.sequence_classification:
             ds_train_val = _load_data_unicausal_sequence_classification(
-                dataset_enum, train_val_data_path, filter_num_sent
+                dataset_enum, train_val_data_path, sentencetype_enum
             )
             ds_train_val = cast_column_to_int(ds_train_val, "labels")
             ds_test = _load_data_unicausal_sequence_classification(
-                dataset_enum, test_data_path, filter_num_sent
+                dataset_enum, test_data_path, sentencetype_enum
             )
             ds_test = cast_column_to_int(ds_test, "labels")
         elif task_enum == TaskType.span_detection:
             ds_train_val = _load_data_unicausal_span_detection(
-                dataset_enum, train_val_data_path, filter_num_sent, filter_num_causal
+                dataset_enum, train_val_data_path, sentencetype_enum, numcausal_enum
             )
             ds_test = _load_data_unicausal_span_detection(
-                dataset_enum, test_data_path, filter_num_sent, filter_num_causal
+                dataset_enum, test_data_path, sentencetype_enum, numcausal_enum
             )
         else:  # pragma: no cover
             raise NotImplementedError()

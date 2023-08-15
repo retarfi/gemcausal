@@ -22,7 +22,14 @@ from transformers import (
 )
 
 from .metrics import compute_exact_match, load_metrics
-from .. import DatasetType, TaskType, assert_dataset_task_pair, logger
+from .. import (
+    DatasetType,
+    NumCausalType,
+    SentenceType,
+    TaskType,
+    assert_dataset_task_pair,
+    logger,
+)
 from ..data.load_data import load_data
 from ..data.reco import preprocess_reco_for_chain_classification
 from ..setting import assert_filter_option
@@ -186,11 +193,11 @@ def predict(args: Namespace) -> None:
     dsd: DatasetDict = load_data(
         task_enum=task_enum,
         dataset_enum=dataset_enum,
+        sentencetype_enum=SentenceType[filter_num_sent],
+        numcausal_enum=NumCausalType[filter_num_causal],
         data_dir=args.data_dir,
         test_samples=args.test_samples,
         seed=seed,
-        filter_num_sent=filter_num_sent,
-        filter_num_causal=filter_num_causal,
     )
     tokenizer: PreTrainedTokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
 
@@ -316,13 +323,8 @@ def predict(args: Namespace) -> None:
 
     filehead: str = (
         datetime.datetime.now().strftime("%Y%m%d_%H%M_")
-        + f"{task_type}_{dataset_type}"
+        + f"{task_type}_{dataset_type}_{filter_num_sent}_{filter_num_causal}_hf-encoder"
     )
-    if filter_num_sent is not None:
-        filehead += f"_{filter_num_sent}"
-    if filter_num_causal is not None:
-        filehead += f"_{filter_num_causal}"
-    filehead += "_hf_encoder"
     result: list[str, Union[list[str], str]] = {
         **best_result,
         **{

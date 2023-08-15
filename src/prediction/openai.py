@@ -19,7 +19,14 @@ from sklearn.metrics import (
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 from tqdm import tqdm
 
-from .. import DatasetType, TaskType, assert_dataset_task_pair, logger
+from .. import (
+    DatasetType,
+    NumCausalType,
+    SentenceType,
+    TaskType,
+    assert_dataset_task_pair,
+    logger,
+)
 from ..data.load_data import load_data
 from ..setting import assert_filter_option
 
@@ -107,7 +114,7 @@ def predict(args: Namespace) -> None:
     filter_num_causal: str = args.filter_num_causal
 
     assert (
-        task_enum != TaskType.span_detection or not args.evaluate_by_word
+        task_enum == TaskType.span_detection or not args.evaluate_by_word
     ), "Argument evaluate_by_word only works with span_detection"
     os.makedirs(output_dir, exist_ok=True)
     template: dict[str, str] = read_template(args.template)
@@ -117,11 +124,11 @@ def predict(args: Namespace) -> None:
     dsd: DatasetDict = load_data(
         task_enum=task_enum,
         dataset_enum=dataset_enum,
+        sentencetype_enum=SentenceType[filter_num_sent],
+        numcausal_enum=NumCausalType[filter_num_causal],
         data_dir=args.data_dir,
         test_samples=args.test_samples,
         seed=seed,
-        filter_num_sent=filter_num_sent,
-        filter_num_causal=filter_num_causal,
     )
     random.seed(seed)
     dsd_icl: Dataset = dsd["train"].select(
@@ -144,28 +151,44 @@ def predict(args: Namespace) -> None:
             return example
 
     elif task_enum == TaskType.span_detection:
-        for i in range(shot):
-            annotation += template["format_text"].format(
-                dsd_icl[i]["text"], " / ".join(dsd_icl[i]["tokens"])
-            )
-            annotation += template["format_class"].format(
-                "".join(
-                    map(
-                        lambda item: template["format_tag"].format(*item),
-                        zip(dsd_icl[i]["tokens"], dsd_icl[i]["tags"]),
+        if args.evaluate_by_word:
+            for i in range(shot):
+                annotation += template["format_text"].format(
+                    dsd_icl[i]["text"], " / ".join(dsd_icl[i]["tokens"])
+                )
+                annotation += template["format_class"].format(
+                    "".join(
+                        map(
+                            lambda item: template["format_tag"].format(*item),
+                            zip(dsd_icl[i]["tokens"], dsd_icl[i]["tags"]),
+                        )
                     )
                 )
-            )
 
-        def format_prompt(example: dict[str, Any]) -> dict[str, Any]:
-            prompt: str = template["task_description"]
-            if shot > 0:
-                prompt += annotation
-            prompt += template["question"] + template["format_text"].format(
-                example["text"], " / ".join(example["tokens"])
-            )
-            example["prompt"] = prompt
-            return example
+            def format_prompt(example: dict[str, Any]) -> dict[str, Any]:
+                prompt: str = template["task_description"]
+                if shot > 0:
+                    prompt += annotation
+                prompt += template["question"] + template["format_text"].format(
+                    example["text"], " / ".join(example["tokens"])
+                )
+                example["prompt"] = prompt
+                return example
+
+        else:
+            for i in range(shot):
+                annotation += template["format_text"].format(dsd_icl[i]["text"])
+                annotation += template["format_class"].format(dsd_icl[i]["tagged_text"])
+
+            def format_prompt(example: dict[str, Any]) -> dict[str, Any]:
+                prompt: str = template["task_description"]
+                if shot > 0:
+                    prompt += annotation
+                prompt += template["question"] + template["format_text"].format(
+                    example["text"]
+                )
+                example["prompt"] = prompt
+                return example
 
     elif task_enum == TaskType.chain_classification:
         for i in range(shot):
@@ -202,10 +225,8 @@ def predict(args: Namespace) -> None:
     ds_test = ds_test.add_column("output", lst_output)
 
     ds_output: Dataset
-    if task_enum in (
-        TaskType.sequence_classification,
-        TaskType.chain_classification,
-    ):
+    result: dict[str, float]
+    if task_enum in (TaskType.sequence_classification, TaskType.chain_classification):
         features: datasets.Features = ds_test.features.copy()
         features["labels"] = datasets.Value("string")
         ds_output = ds_test.cast(features)
@@ -217,7 +238,7 @@ def predict(args: Namespace) -> None:
             return example
 
         ds_output = ds_output.map(extract_label)
-        result: dict[str, float] = compute_metrics(
+        result = compute_metrics(
             ds_output["labels"], ds_output["pred"], labels=["1"], average="binary"
         )
         logger.info("Result: %s", result)
@@ -227,36 +248,58 @@ def predict(args: Namespace) -> None:
             list(set(ds_test.column_names) - {"example_id", "labels", "output", "pred"})
         )
     elif task_enum == TaskType.span_detection:
+        if args.evaluate_by_word:
 
-        def extract_label(example: dict[str, Any]) -> dict[str, Any]:
-            example["pred_asis"] = example["output"].replace(
-                template["format_class"].split("{}")[0], ""
-            )
-            lst_pred_tags: list[str] = [
-                line.replace(tag + template["format_tag"].split("{}")[1], "")
-                for tag, line in zip(
-                    example["tokens"], example["pred_asis"].split("\n")
+            def extract_label(example: dict[str, Any]) -> dict[str, Any]:
+                example["pred_asis"] = example["output"].replace(
+                    template["format_class"].split("{}")[0], ""
                 )
-            ]
-            example["pred"] = lst_pred_tags
-            num_pred: int = len(example["pred"])
-            num_tags: int = len(example["tags"])
-            if num_pred < num_tags:
-                example["pred"] += [""] * (num_tags - num_pred)
-            elif num_pred > num_tags:
-                example["pred"] = example["pred"][:num_pred]
-            assert len(example["pred"]) == len(
-                example["tags"]
-            ), f"Inconsistent numbers: {example}"
-            return example
+                lst_pred_tags: list[str] = [
+                    line.replace(tag + template["format_tag"].split("{}")[1], "")
+                    for tag, line in zip(
+                        example["tokens"], example["pred_asis"].split("\n")
+                    )
+                ]
+                example["pred"] = lst_pred_tags
+                num_pred: int = len(example["pred"])
+                num_tags: int = len(example["tags"])
+                if num_pred < num_tags:
+                    example["pred"] += [""] * (num_tags - num_pred)
+                elif num_pred > num_tags:
+                    example["pred"] = example["pred"][:num_pred]
+                assert len(example["pred"]) == len(
+                    example["tags"]
+                ), f"Inconsistent numbers: {example}"
+                return example
 
-        ds_output = ds_test.map(extract_label)
-        result: dict[str, float] = compute_metrics(
-            list(itertools.chain.from_iterable(ds_output["tags"])),
-            list(itertools.chain.from_iterable(ds_output["pred"])),
-            labels=["B-C", "I-C", "B-E", "I-E", "O"],
-            average="macro",
-        )
+            ds_output = ds_test.map(extract_label)
+            result: dict[str, float] = compute_metrics(
+                list(itertools.chain.from_iterable(ds_output["tags"])),
+                list(itertools.chain.from_iterable(ds_output["pred"])),
+                labels=["B-C", "I-C", "B-E", "I-E", "O"],
+                average="macro",
+            )
+            result["exact_match"] = sum(
+                [t == p for t, p in zip(ds_output["tags"], ds_output["pred"])]
+            ) / len(ds_output)
+        else:
+
+            def extract_label(example: dict[str, Any]) -> dict[str, Any]:
+                example["pred"] = example["output"].replace(
+                    template["format_class"].split("{}")[0], ""
+                )
+                return example
+
+            ds_output = ds_output.map(extract_label)
+            result = {
+                "exact_match": sum(
+                    [
+                        t == p
+                        for t, p in zip(ds_output["tagged_text"], ds_output["pred"])
+                    ]
+                )
+                / len(ds_output)
+            }
         logger.info("Result: %s", result)
 
         # output prompt result
@@ -266,6 +309,7 @@ def predict(args: Namespace) -> None:
                 - {
                     "example_id",
                     "text",
+                    "tagged_text",
                     "tokens",
                     "tags",
                     "output",
@@ -285,6 +329,7 @@ def predict(args: Namespace) -> None:
                         {
                             "example_id": example["example_id"][i],
                             "text": example["text"][i],
+                            "tagged_text": example["tagged_text"][i],
                             "token": example["tokens"][i][j],
                             "tag": example["tags"][i][j],
                             "output": example["output"][i],
@@ -302,13 +347,9 @@ def predict(args: Namespace) -> None:
         raise NotImplementedError()
 
     filehead: str = (
-        datetime.datetime.now().strftime("%Y%m%d_%H%M_") + f"{task_type}_{dataset_type}"
+        datetime.datetime.now().strftime("%Y%m%d_%H%M_")
+        + f"{task_type}_{dataset_type}_{filter_num_sent}_{filter_num_causal}_{model}"
     )
-    if filter_num_sent is not None:
-        filehead += f"_{filter_num_sent}"
-    if filter_num_causal is not None:
-        filehead += f"_{filter_num_causal}"
-    filehead += f"_{model}"
     result = {
         **result,
         **{

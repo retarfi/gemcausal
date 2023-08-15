@@ -8,17 +8,17 @@ from .fincausal import load_data_fincausal
 from .japanese import load_data_jpfin
 from .unicausal import load_data_unicausal
 from .reco import load_reco_dataset
-from .. import TaskType, DatasetType, assert_dataset_task_pair, logger
+from .. import DatasetType, TaskType, assert_dataset_task_pair, logger
 
 
 def load_data(
     task_enum: Enum,
     dataset_enum: Enum,
+    sentencetype_enum: Enum,
+    numcausal_enum: Enum,
     data_dir: str,
     test_samples: Optional[int] = None,
     seed: int = 42,
-    filter_num_sent: Optional[str] = None,
-    filter_num_causal: Optional[str] = None,
 ) -> DatasetDict:
     assert_dataset_task_pair(dataset_enum=dataset_enum, task_enum=task_enum)
     ds_train: Dataset
@@ -35,21 +35,25 @@ def load_data(
         ds_train, ds_valid, ds_test = load_data_unicausal(
             dataset_enum=dataset_enum,
             task_enum=task_enum,
+            sentencetype_enum=sentencetype_enum,
+            numcausal_enum=numcausal_enum,
             data_dir=data_dir,
             seed=seed,
-            filter_num_sent=filter_num_sent,
-            filter_num_causal=filter_num_causal,
         )
     elif dataset_enum == DatasetType.fincausal:
         ds_train, ds_valid, ds_test = load_data_fincausal(
             task_enum=task_enum,
             data_dir=data_dir,
+            sentencetype_enum=sentencetype_enum,
             seed=seed,
-            filter_num_sent=filter_num_sent,
         )
     elif dataset_enum in (DatasetType.jpfinresults, DatasetType.jpnikkei):
         ds_train, ds_valid, ds_test = load_data_jpfin(
-            dataset_enum=dataset_enum, task_enum=task_enum, data_dir=data_dir, seed=seed
+            dataset_enum=dataset_enum,
+            task_enum=task_enum,
+            data_dir=data_dir,
+            numcausal_enum=numcausal_enum,
+            seed=seed,
         )
     elif dataset_enum == DatasetType.reco:
         reco_dir: str = os.path.join(data_dir, "reco")
@@ -81,7 +85,7 @@ def load_data(
         if task_enum == TaskType.sequence_classification:
             set_columns = {"example_id", "text", "labels"}
         elif task_enum == TaskType.span_detection:
-            set_columns = {"example_id", "text", "tokens", "tags"}
+            set_columns = {"example_id", "text", "tokens", "tags", "tagged_text"}
         elif task_enum == TaskType.chain_classification:
             if dataset_enum == DatasetType.reco:
                 set_columns = {"example_id", "events", "short_contexts", "labels"}

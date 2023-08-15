@@ -22,6 +22,9 @@ DatasetType: EnumMeta = Enum(
 TaskType: EnumMeta = Enum(
     "Task", ("sequence_classification", "span_detection", "chain_classification")
 )
+SentenceType: EnumMeta = Enum("Sentence", ("intra", "inter", "all"))
+NumCausalType: EnumMeta = Enum("NumCausal", ("single", "multi", "all"))
+
 DatasetTaskPairs: tuple[tuple[Enum, tuple[Enum]]] = (
     (DatasetType.altlex, (TaskType.sequence_classification, TaskType.span_detection)),
     (DatasetType.because, (TaskType.sequence_classification, TaskType.span_detection)),
@@ -43,10 +46,16 @@ DatasetTaskPairs: tuple[tuple[Enum, tuple[Enum]]] = (
 
 
 TagsForSpanDetection = namedtuple(
-    "SpanTags", ["cause_begin", "cause_end", "effect_begin", "effetct_end"]
+    "SpanTags", ["cause_begin", "cause_end", "effect_begin", "effect_end"]
+)
+SpanTagsFormat = TagsForSpanDetection(
+    cause_begin="<c{}>", cause_end="</c{}>", effect_begin="<e{}>", effect_end="</e{}>"
 )
 SpanTags = TagsForSpanDetection(
-    cause_begin="<c{}>", cause_end="</c{}>", effect_begin="<e{}>", effetct_end="</e{}>"
+    cause_begin=SpanTagsFormat.cause_begin.format(""),
+    cause_end=SpanTagsFormat.cause_end.format(""),
+    effect_begin=SpanTagsFormat.effect_begin.format(""),
+    effect_end=SpanTagsFormat.effect_end.format(""),
 )
 
 
@@ -67,39 +76,65 @@ def assert_filter_option(dataset_enum: Enum, args: Namespace) -> None:
         DatasetType.pdtb,
         DatasetType.fincausal,
     )
-    tpl_task_multi_causal_available: tuple[str] = (
+    tpl_task_only_inter_sent: tuple[str] = (
+        DatasetType.jpfinresults,
+        DatasetType.jpnikkei,
+    )
+    tpl_task_multi_causal_separate_available: tuple[str] = (
         DatasetType.altlex,
         DatasetType.because,
         DatasetType.pdtb,
         DatasetType.jpfinresults,
     )
     if (
-        args.filter_num_sent is not None
+        args.filter_num_sent != SentenceType.all.name
         and dataset_enum not in tpl_task_inter_sent_available
     ):
-        if args.filter_num_sent == "intra":
-            logger.warning(
-                "filter_num_sent='intra' is not available for %s, "
-                "so force to change with None",
-                dataset_enum.name,
-            )
-            args.filter_num_sent = None
+        if dataset_enum in tpl_task_only_inter_sent:
+            if SentenceType[args.filter_num_sent] == SentenceType.inter:
+                logger.warning(
+                    "filter_num_sent='%s' is not available for %s, "
+                    "so force to change to %s",
+                    SentenceType.inter.name,
+                    dataset_enum.name,
+                    SentenceType.all.name,
+                )
+                args.filter_num_sent = SentenceType.all.name
+            else:
+                raise ValueError(
+                    f"filter_num_sent='{SentenceType.intra.name}' is not available "
+                    f"for {dataset_enum.name}"
+                )
         else:
-            raise ValueError(
-                f"filter_num_sent='inter' is not available for {dataset_enum.name}"
-            )
+            if SentenceType[args.filter_num_sent] == SentenceType.intra:
+                logger.warning(
+                    "filter_num_sent='%s' is not available for %s, "
+                    "so force to change to %s",
+                    SentenceType.intra.name,
+                    dataset_enum.name,
+                    SentenceType.all.name,
+                )
+                args.filter_num_sent = SentenceType.all.name
+            else:
+                raise ValueError(
+                    f"filter_num_sent='{SentenceType.inter.name}' is not available "
+                    f"for {dataset_enum.name}"
+                )
     if (
-        args.filter_num_causal is not None
-        and dataset_enum not in tpl_task_multi_causal_available
+        args.filter_num_causal != NumCausalType.all.name
+        and dataset_enum not in tpl_task_multi_causal_separate_available
     ):
-        if args.filter_num_causal == "single":
+        if NumCausalType[args.filter_num_causal] == NumCausalType.single:
             logger.warning(
-                "filter_num_causal='single' is not available for %s, "
-                "so force to change with None",
+                "filter_num_causal='%s' is not available for %s, "
+                "so force to change to %s",
+                NumCausalType.single.name,
                 dataset_enum.name,
+                NumCausalType.all.name,
             )
-            args.filter_num_causal = None
+            args.filter_num_causal = NumCausalType.all.name
         else:
             raise ValueError(
-                f"filter_num_causal='mult' is not available for {dataset_enum.name}"
+                f"filter_num_causal='{NumCausalType.multi.name}' is not available "
+                f"for {dataset_enum.name}"
             )

@@ -57,38 +57,64 @@ def test_compute_metrics(
 
 
 @pytest.mark.parametrize(
-    "task_type, dataset_type, json_file",
+    "task_type, dataset_type, num_sent, num_causal, evaluate_by_word",
     [
-        ("sequence_classification", "fincausal", "openai_sequence_classification.json"),
-        ("sequence_classification", "pdtb", "openai_sequence_classification.json"),
-        ("span_detection", "fincausal", "openai_span_detection.json"),
-        ("span_detection", "pdtb", "openai_span_detection.json"),
-        ("chain_classification", "reco", "openai_chain_classification.json"),
+        ("sequence_classification", "fincausal", "all", "all", False),
+        ("sequence_classification", "pdtb", "all", "all", False),
+        ("sequence_classification", "pdtb", "intra", "all", False),
+        ("sequence_classification", "pdtb", "inter", "all", False),
+        ("chain_classification", "reco", "all", "all", False),
+        ("span_detection", "fincausal", "all", "all", True),
+        ("span_detection", "fincausal", "intra", "all", True),
+        ("span_detection", "fincausal", "inter", "all", True),
+        ("span_detection", "pdtb", "intra", "all", True),
+        ("span_detection", "pdtb", "inter", "all", True),
+        ("span_detection", "pdtb", "all", "single", True),
+        ("span_detection", "pdtb", "all", "multi", True),
     ],
 )
-def test_predict(task_type: str, dataset_type: str, json_file: str) -> None:
+def test_predict(
+    task_type: str, dataset_type: str, num_sent: str, num_causal: str, evaluate_by_word
+) -> None:
+    json_file: str
+    if task_type == "sequence_classification":
+        json_file = "openai_sequence_classification.json"
+    elif task_type == "span_detection":
+        if evaluate_by_word:
+            json_file = "openai_span_detection_by_word.json"
+        else:
+            json_file = "openai_span_detection_by_sentence.json"
+    elif task_type == "chain_classification":
+        json_file = "openai_chain_classification.json"
+    else:
+        raise NotImplementedError()
     parser = argparse.ArgumentParser()
     add_argument_common(parser)
     add_argument_openai(parser)
 
-    args = parser.parse_args(
-        [
-            "--task_type",
-            task_type,
-            "--dataset_type",
-            dataset_type,
-            "--data_dir",
-            os.path.join(THIS_DIR, "../../data"),
-            "--test_samples",
-            "5",
-            "--output_dir",
-            os.path.join(THIS_DIR, "../materials/results"),
-            "--model",
-            "gpt-3.5-turbo",
-            "--template",
-            os.path.join(THIS_DIR, "../../template", json_file),
-            "--shot",
-            "1",
-        ]
-    )
+    lst_args: list[str] = [
+        "--task_type",
+        task_type,
+        "--dataset_type",
+        dataset_type,
+        "--data_dir",
+        os.path.join(THIS_DIR, "../../data"),
+        "--test_samples",
+        "2",
+        "--output_dir",
+        os.path.join(THIS_DIR, "../materials/results"),
+        "--filter_num_sent",
+        num_sent,
+        "--filter_num_causal",
+        num_causal,
+        "--model",
+        "gpt-3.5-turbo",
+        "--template",
+        os.path.join(THIS_DIR, "../../template", json_file),
+        "--shot",
+        "1",
+    ]
+    if evaluate_by_word:
+        lst_args.append("--evaluate_by_word")
+    args = parser.parse_args(lst_args)
     predict(args)
