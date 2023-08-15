@@ -1,6 +1,7 @@
-from typing import Dict, List
+from typing import Dict, List, Union
 
 import evaluate
+import numpy as np
 from sklearn.metrics import confusion_matrix
 
 
@@ -50,3 +51,19 @@ def load_metrics(lst_metrics: list[str]) -> evaluate.CombinedEvaluations:
     # for hf model
     metrics = evaluate.combine(lst_metrics)
     return metrics
+
+
+def compute_exact_match(
+    predictions: Union[np.ndarray, list],
+    references: Union[np.ndarray, list],
+    ignore_index: int = -100,
+) -> dict[str, float]:
+    assert len(predictions) == len(references), "Number of examples is not same"
+    lst_match: list[int] = []
+    for p, r in zip(predictions, references):
+        assert len(p) == len(r)
+        arr_bool: np.ndarray = np.array(r) != ignore_index
+        lst_match.append(
+            int(np.array_equal(np.array(p)[arr_bool], np.array(r)[arr_bool]))
+        )
+    return {"exact_match": np.mean(lst_match)}

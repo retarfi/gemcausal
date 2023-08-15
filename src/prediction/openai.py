@@ -4,6 +4,7 @@ import json
 import os
 import random
 from argparse import Namespace
+from enum import Enum
 from typing import Any, Dict, Union
 
 import datasets
@@ -20,6 +21,7 @@ from tqdm import tqdm
 
 from .. import DatasetType, TaskType, assert_dataset_task_pair, logger
 from ..data.load_data import load_data
+from ..setting import assert_filter_option
 
 
 def api_key_validation() -> None:
@@ -94,7 +96,9 @@ def compute_metrics(
 def predict(args: Namespace) -> None:
     api_key_validation()
     task_type: str = args.task_type
+    task_enum: Enum = TaskType[task_type]
     dataset_type: str = args.dataset_type
+    dataset_enum: Enum = DatasetType[dataset_type]
     model: str = args.model
     shot: int = args.shot
     output_dir: str = args.output_dir
@@ -102,15 +106,17 @@ def predict(args: Namespace) -> None:
     filter_num_sent: str = args.filter_num_sent
     filter_num_causal: str = args.filter_num_causal
 
+    assert (
+        task_enum != TaskType.span_detection or not args.evaluate_by_word
+    ), "Argument evaluate_by_word only works with span_detection"
     os.makedirs(output_dir, exist_ok=True)
     template: dict[str, str] = read_template(args.template)
 
-    assert_dataset_task_pair(
-        dataset_enum=DatasetType[dataset_type], task_enum=TaskType[task_type]
-    )
+    assert_dataset_task_pair(dataset_enum=dataset_enum, task_enum=task_enum)
+    assert_filter_option(dataset_enum=dataset_enum, args=args)
     dsd: DatasetDict = load_data(
-        task_enum=TaskType[task_type],
-        dataset_enum=DatasetType[dataset_type],
+        task_enum=task_enum,
+        dataset_enum=dataset_enum,
         data_dir=args.data_dir,
         test_samples=args.test_samples,
         seed=seed,
@@ -122,7 +128,7 @@ def predict(args: Namespace) -> None:
         random.sample(range(len(dsd["train"])), k=shot)
     )
     annotation: str = template["header_example"]
-    if TaskType[task_type] == TaskType.sequence_classification:
+    if task_enum == TaskType.sequence_classification:
         for i in range(shot):
             annotation += template["format_text"].format(dsd_icl[i]["text"])
             annotation += template["format_class"].format(dsd_icl[i]["labels"])
@@ -137,7 +143,7 @@ def predict(args: Namespace) -> None:
             example["prompt"] = prompt
             return example
 
-    elif TaskType[task_type] == TaskType.span_detection:
+    elif task_enum == TaskType.span_detection:
         for i in range(shot):
             annotation += template["format_text"].format(
                 dsd_icl[i]["text"], " / ".join(dsd_icl[i]["tokens"])
@@ -161,7 +167,7 @@ def predict(args: Namespace) -> None:
             example["prompt"] = prompt
             return example
 
-    elif TaskType[task_type] == TaskType.chain_classification:
+    elif task_enum == TaskType.chain_classification:
         for i in range(shot):
             annotation += template["format_text"].format(
                 ", ".join(dsd_icl[i]["events"]), *dsd_icl[i]["short_contexts"]
@@ -196,7 +202,7 @@ def predict(args: Namespace) -> None:
     ds_test = ds_test.add_column("output", lst_output)
 
     ds_output: Dataset
-    if TaskType[task_type] in (
+    if task_enum in (
         TaskType.sequence_classification,
         TaskType.chain_classification,
     ):
@@ -220,7 +226,7 @@ def predict(args: Namespace) -> None:
         ds_output = ds_output.remove_columns(
             list(set(ds_test.column_names) - {"example_id", "labels", "output", "pred"})
         )
-    elif TaskType[task_type] == TaskType.span_detection:
+    elif task_enum == TaskType.span_detection:
 
         def extract_label(example: dict[str, Any]) -> dict[str, Any]:
             example["pred_asis"] = example["output"].replace(
@@ -296,14 +302,20 @@ def predict(args: Namespace) -> None:
         raise NotImplementedError()
 
     filehead: str = (
-        datetime.datetime.now().strftime("%Y%m%d_%H%M_")
-        + f"{task_type}_{dataset_type}_{model}"
+        datetime.datetime.now().strftime("%Y%m%d_%H%M_") + f"{task_type}_{dataset_type}"
     )
+    if filter_num_sent is not None:
+        filehead += f"_{filter_num_sent}"
+    if filter_num_causal is not None:
+        filehead += f"_{filter_num_causal}"
+    filehead += f"_{model}"
     result = {
         **result,
         **{
             "task_type": task_type,
             "dataset_type": dataset_type,
+            "intra-/inter-sent": filter_num_sent,
+            "single-/multi-causal": filter_num_causal,
             "model": model,
             "template": args.template,
             "shot": shot,

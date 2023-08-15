@@ -3,6 +3,7 @@ import itertools
 import json
 import os
 from argparse import Namespace
+from enum import Enum
 from typing import Any, Optional, Union
 
 import numpy as np
@@ -20,10 +21,11 @@ from transformers import (
     TrainingArguments,
 )
 
-from .metrics import load_metrics
+from .metrics import compute_exact_match, load_metrics
 from .. import DatasetType, TaskType, assert_dataset_task_pair, logger
 from ..data.load_data import load_data
 from ..data.reco import preprocess_reco_for_chain_classification
+from ..setting import assert_filter_option
 
 
 def preprocess_for_sequence_classification(
@@ -164,7 +166,9 @@ def preprocess_for_chain_classification(
 
 def predict(args: Namespace) -> None:
     task_type: str = args.task_type
+    task_enum: Enum = TaskType[task_type]
     dataset_type: str = args.dataset_type
+    dataset_enum: Enum = DatasetType[dataset_type]
     seed: int = args.seed
     model_name: str = args.model_name
     tokenizer_name: str = (
@@ -174,15 +178,14 @@ def predict(args: Namespace) -> None:
     train_batch_size: int = args.train_batch_size
     eval_batch_size: int = args.eval_batch_size
     max_epochs: int = args.max_epochs
-    filter_num_sent: str = args.filter_num_sent
-    filter_num_causal: str = args.filter_num_causal
+    filter_num_sent: Optional[str] = args.filter_num_sent
+    filter_num_causal: Optional[str] = args.filter_num_causal
 
-    assert_dataset_task_pair(
-        dataset_enum=DatasetType[dataset_type], task_enum=TaskType[task_type]
-    )
+    assert_dataset_task_pair(dataset_enum=dataset_enum, task_enum=task_enum)
+    assert_filter_option(dataset_enum=dataset_enum, args=args)
     dsd: DatasetDict = load_data(
-        task_enum=TaskType[task_type],
-        dataset_enum=DatasetType[dataset_type],
+        task_enum=task_enum,
+        dataset_enum=dataset_enum,
         data_dir=args.data_dir,
         test_samples=args.test_samples,
         seed=seed,
@@ -193,11 +196,11 @@ def predict(args: Namespace) -> None:
 
     logger.info("Tokenize datasets")
     config: PretrainedConfig
-    if TaskType[task_type] == TaskType.sequence_classification:
+    if task_enum == TaskType.sequence_classification:
         dsd, config = preprocess_for_sequence_classification(dsd, tokenizer, model_name)
-    elif TaskType[task_type] == TaskType.span_detection:
+    elif task_enum == TaskType.span_detection:
         dsd, config = preprocess_for_span_detection(dsd, tokenizer, model_name)
-    elif TaskType[task_type] == TaskType.chain_classification:
+    elif task_enum == TaskType.chain_classification:
         dsd, config = preprocess_for_chain_classification(
             dsd, tokenizer, model_name, dataset_type=dataset_type
         )
@@ -207,6 +210,8 @@ def predict(args: Namespace) -> None:
     lst_grid_results: list[dict[str, float]] = []
     lst_metrics: list[str] = ["f1", "precision", "recall", "accuracy"]
     metrics: CombinedEvaluations = load_metrics(lst_metrics)
+    if task_enum == TaskType.span_detection:
+        lst_metrics.append("exact_match")
     for lr in lst_lr:
         training_args: TrainingArguments = TrainingArguments(
             output_dir="./materials/",
@@ -227,7 +232,7 @@ def predict(args: Namespace) -> None:
         )
         model: PreTrainedModel
         metric_average: str
-        if TaskType[task_type] in (
+        if task_enum in (
             TaskType.sequence_classification,
             TaskType.chain_classification,
         ):
@@ -235,7 +240,7 @@ def predict(args: Namespace) -> None:
                 model_name
             )
             metric_average = "binary"
-        elif TaskType[task_type] == TaskType.span_detection:
+        elif task_enum == TaskType.span_detection:
             model = transformers.AutoModelForTokenClassification.from_pretrained(
                 model_name, config=config
             )
@@ -248,7 +253,9 @@ def predict(args: Namespace) -> None:
                 p.predictions[0] if isinstance(p.predictions, tuple) else p.predictions
             )
             preds = np.argmax(preds, axis=-1)
-            if TaskType[task_type] == TaskType.span_detection:
+            if task_enum == TaskType.span_detection:
+                # exact match
+                result_em: dict[str, float] = compute_exact_match(preds, p.label_ids)
                 preds = preds[p.label_ids != -100].ravel()
                 label_ids = p.label_ids[p.label_ids != -100].ravel()
             else:
@@ -256,6 +263,8 @@ def predict(args: Namespace) -> None:
             result = metrics.compute(
                 predictions=preds, references=label_ids, average=metric_average
             )
+            if task_enum == TaskType.span_detection:
+                result.update(result_em)
             return result
 
         trainer: Trainer = Trainer(
@@ -307,13 +316,20 @@ def predict(args: Namespace) -> None:
 
     filehead: str = (
         datetime.datetime.now().strftime("%Y%m%d_%H%M_")
-        + f"{task_type}_{dataset_type}_hf_encoder"
+        + f"{task_type}_{dataset_type}"
     )
+    if filter_num_sent is not None:
+        filehead += f"_{filter_num_sent}"
+    if filter_num_causal is not None:
+        filehead += f"_{filter_num_causal}"
+    filehead += "_hf_encoder"
     result: list[str, Union[list[str], str]] = {
         **best_result,
         **{
             "task_type": task_type,
             "dataset_type": dataset_type,
+            "intra-/inter-sent": filter_num_sent,
+            "single-/multi-causal": filter_num_causal,
             "model": model_name,
             "tokenizer": tokenizer_name,
             "lr": lst_lr,
