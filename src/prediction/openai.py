@@ -282,6 +282,47 @@ def predict(args: Namespace) -> None:
             result["exact_match"] = sum(
                 [t == p for t, p in zip(ds_output["tags"], ds_output["pred"])]
             ) / len(ds_output)
+            # output prompt result
+            ds_output = ds_output.remove_columns(
+                list(
+                    set(ds_test.column_names)
+                    - {
+                        "example_id",
+                        "text",
+                        "tagged_text",
+                        "tokens",
+                        "tags",
+                        "output",
+                        "pred",
+                        "pred_asis",
+                    }
+                )
+            )
+
+            def extract_by_tokens(
+                example: dict[str, Union[list[str], str]]
+            ) -> dict[str, Union[list[str], str]]:
+                lst: list[dict[str, Union[list[str], str]]] = []
+                for i in range(len(example["text"])):
+                    for j in range(len(example["tokens"][i])):
+                        lst.append(
+                            {
+                                "example_id": example["example_id"][i],
+                                "text": example["text"][i],
+                                "tagged_text": example["tagged_text"][i],
+                                "token": example["tokens"][i][j],
+                                "tag": example["tags"][i][j],
+                                "output": example["output"][i],
+                                "pred_tag": example["pred"][i][j],
+                            }
+                        )
+                return {k: [x[k] for x in lst] for k in lst[0].keys()}
+
+            ds_output = ds_output.map(
+                extract_by_tokens,
+                batched=True,
+                remove_columns=["tokens", "tags", "pred", "pred_asis"]
+            )
         else:
 
             def extract_label(example: dict[str, Any]) -> dict[str, Any]:
@@ -290,7 +331,7 @@ def predict(args: Namespace) -> None:
                 )
                 return example
 
-            ds_output = ds_output.map(extract_label)
+            ds_output = ds_test.map(extract_label)
             result = {
                 "exact_match": sum(
                     [
@@ -300,56 +341,22 @@ def predict(args: Namespace) -> None:
                 )
                 / len(ds_output)
             }
-        logger.info("Result: %s", result)
-
-        # output prompt result
-        ds_output = ds_output.remove_columns(
-            list(
-                set(ds_test.column_names)
-                - {
-                    "example_id",
-                    "text",
-                    "tagged_text",
-                    "tokens",
-                    "tags",
-                    "output",
-                    "pred",
-                    "pred_asis",
-                }
+            # output prompt result
+            ds_output = ds_output.remove_columns(
+                list(
+                    set(ds_test.column_names)
+                    - {
+                        "example_id",
+                        "text",
+                        "tagged_text",
+                        "output",
+                        "pred",
+                    }
+                )
             )
-        )
-
-        def extract_by_tokens(
-            example: dict[str, Union[list[str], str]]
-        ) -> dict[str, Union[list[str], str]]:
-            lst: list[dict[str, Union[list[str], str]]] = []
-            for i in range(len(example["text"])):
-                for j in range(len(example["tokens"][i])):
-                    lst.append(
-                        {
-                            "example_id": example["example_id"][i],
-                            "text": example["text"][i],
-                            "tagged_text": example["tagged_text"][i],
-                            "token": example["tokens"][i][j],
-                            "tag": example["tags"][i][j],
-                            "output": example["output"][i],
-                            "pred_tag": example["pred"][i][j],
-                        }
-                    )
-            return {k: [x[k] for x in lst] for k in lst[0].keys()}
-
-        ds_output = ds_output.map(
-            extract_by_tokens,
-            batched=True,
-            remove_columns=["tokens", "tags", "pred", "pred_asis"],
-        )
+        logger.info("Result: %s", result)
     else:  # pragma: no cover
         raise NotImplementedError()
-
-    filehead: str = (
-        datetime.datetime.now().strftime("%Y%m%d_%H%M_")
-        + f"{task_type}_{dataset_type}_{filter_num_sent}_{filter_num_causal}_{model}"
-    )
     result = {
         **result,
         **{
@@ -363,7 +370,19 @@ def predict(args: Namespace) -> None:
             "seed": seed,
         },
     }
-    for key in ("f1", "accuracy", "precision", "recall"):
+    filehead: str = (
+        datetime.datetime.now().strftime("%Y%m%d_%H%M_")
+        + f"{task_type}_{dataset_type}_{filter_num_sent}_{filter_num_causal}"
+    )
+    if args.evaluate_by_word:
+        filehead += "_ebw"
+    filehead += f"_{model}"
+    tpl_eval_key: tuple[str]
+    if task_enum == TaskType.span_detection and not args.evaluate_by_word:
+        tpl_eval_key = ("exact_match",)
+    else:
+        tpl_eval_key = ("f1", "accuracy", "precision", "recall")
+    for key in tpl_eval_key:
         result[key] = round(result[key], 5)
     with open(os.path.join(output_dir, f"{filehead}.json"), "w") as f:
         json.dump(result, f, indent=4, sort_keys=True, separators=(",", ": "))
