@@ -39,6 +39,9 @@ priority = "explicit"
 [tool.coverage.report]
 exclude_lines = ["pragma: no cover", "if __name__ == .__main__.:"]
 
+[tool.pytest.ini_options]
+addopts = "--cov=./ --cov-report=xml"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
