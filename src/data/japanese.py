@@ -68,7 +68,7 @@ def is_nested_causal(text: str) -> bool:
             i += 1
         # intersection detection
         return any(map(lambda x: _is_crossing(*x), itertools.combinations(lst_idxs, 2)))
-    except AssertionError as e:
+    except AssertionError as e:  # pragma: no cover
         print(e)
         raise AssertionError(f"Error with text: {text}")
 

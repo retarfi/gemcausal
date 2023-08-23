@@ -67,10 +67,12 @@ def test_compute_metrics(
         ("span_detection", "fincausal", "all", "all", True),
         ("span_detection", "fincausal", "intra", "all", True),
         ("span_detection", "fincausal", "inter", "all", True),
+        ("span_detection", "fincausal", "intra", "all", False),
         ("span_detection", "pdtb", "intra", "all", True),
         ("span_detection", "pdtb", "inter", "all", True),
         ("span_detection", "pdtb", "all", "single", True),
         ("span_detection", "pdtb", "all", "multi", True),
+        ("span_detection", "pdtb", "intra", "all", False),
     ],
 )
 def test_predict(
@@ -86,7 +88,7 @@ def test_predict(
             json_file = "openai_span_detection_by_sentence.json"
     elif task_type == "chain_classification":
         json_file = "openai_chain_classification.json"
-    else:
+    else:  # pragma: no cover
         raise NotImplementedError()
     parser = argparse.ArgumentParser()
     add_argument_common(parser)
