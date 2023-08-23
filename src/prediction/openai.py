@@ -321,7 +321,7 @@ def predict(args: Namespace) -> None:
             ds_output = ds_output.map(
                 extract_by_tokens,
                 batched=True,
-                remove_columns=["tokens", "tags", "pred", "pred_asis"]
+                remove_columns=["tokens", "tags", "pred", "pred_asis"],
             )
         else:
 
@@ -345,13 +345,7 @@ def predict(args: Namespace) -> None:
             ds_output = ds_output.remove_columns(
                 list(
                     set(ds_test.column_names)
-                    - {
-                        "example_id",
-                        "text",
-                        "tagged_text",
-                        "output",
-                        "pred",
-                    }
+                    - {"example_id", "text", "tagged_text", "output", "pred"}
                 )
             )
         logger.info("Result: %s", result)
