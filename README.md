@@ -66,6 +66,9 @@ hf-encoder \
 --max_epochs 10
 ```
 
+There are other arguments such as `--filter_num_sent`, `--filter_num_causal`, and `--evaluate_by_word` (for OpenAI models).<br>
+Please see details using `--help` flag.
+
 ## Data Preprocessing
 
 For download and preprocess information, see [data/README.md](data/README.md)
