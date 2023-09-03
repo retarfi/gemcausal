@@ -123,7 +123,7 @@ def custom_agg(group: Any) -> pd.Series:
 
 
 def _filter_data_by_num_sent(
-    dataset_enum: Enum, ds: Dataset, sentencetype_enum: Enum
+    ds: Dataset, dataset_enum: Enum, sentencetype_enum: Enum
 ) -> Dataset:
     if (
         dataset_enum in (DatasetType.altlex, DatasetType.because, DatasetType.semeval)
@@ -137,9 +137,7 @@ def _filter_data_by_num_sent(
     return ds
 
 
-def _filter_data_by_num_causal(
-    dataset_enum: Enum, ds: Dataset, numcausal_enum: Enum
-) -> Dataset:
+def _filter_data_by_num_causal(ds: Dataset, numcausal_enum: Enum) -> Dataset:
     df: pd.DataFrame = ds.to_pandas()
     if numcausal_enum == NumCausalType.single:
         df = df[~df.duplicated(subset=["corpus", "doc_id", "sent_id"], keep=False)]
@@ -155,19 +153,15 @@ def _filter_data_by_num_causal(
     return Dataset.from_pandas(df, preserve_index=False)
 
 
-def _load_data_unicausal_sequence_classification(
-    dataset_enum: Enum, data_path: str, sentencetype_enum: Enum
-) -> Dataset:
+def _load_data_unicausal_sequence_classification(data_path: str) -> Dataset:
     ds: Dataset = load_dataset("csv", data_files=data_path, split="train")
     ds = ds.filter(lambda x: x["eg_id"] == 0)
+    ds = ds.map(get_bio_for_datasets)
     ds = ds.rename_columns({"seq_label": "labels", "eg_id": "example_id"})
-    ds = _filter_data_by_num_sent(dataset_enum, ds, sentencetype_enum)
     return ds
 
 
-def _load_data_unicausal_span_detection(
-    dataset_enum: Enum, data_path: str, sentencetype_enum: Enum, numcausal_enum: Enum
-) -> Dataset:
+def _load_data_unicausal_span_detection(data_path: str) -> Dataset:
     df: pd.DataFrame = pd.read_csv(data_path)
     df = df[df.pair_label == 1]
     # TODO: remove if no problem
@@ -176,8 +170,21 @@ def _load_data_unicausal_span_detection(
     ds: Dataset = Dataset.from_pandas(df)
     ds = ds.map(get_bio_for_datasets)
     ds = ds.rename_column("eg_id", "example_id")
-    ds = _filter_data_by_num_causal(dataset_enum, ds, numcausal_enum)
-    ds = _filter_data_by_num_sent(dataset_enum, ds, sentencetype_enum)
+    return ds
+
+
+def _filter_data(
+    ds: Dataset,
+    task_enum: Enum,
+    dataset_enum: Enum,
+    numcausal_enum: Enum,
+    sentencetype_enum: Enum,
+) -> Dataset:
+    if task_enum == TaskType.span_detection:
+        ds = _filter_data_by_num_causal(ds, numcausal_enum=numcausal_enum)
+    ds = _filter_data_by_num_sent(
+        ds, dataset_enum=dataset_enum, sentencetype_enum=sentencetype_enum
+    )
     return ds
 
 
@@ -193,18 +200,21 @@ def load_data_unicausal(
         data_path: str = os.path.join(data_dir, "because.csv")
         ds: Dataset
         if task_enum == TaskType.sequence_classification:
-            ds = _load_data_unicausal_sequence_classification(
-                dataset_enum, data_path, sentencetype_enum
-            )
+            ds = _load_data_unicausal_sequence_classification(data_path)
         elif task_enum == TaskType.span_detection:
-            ds = _load_data_unicausal_span_detection(
-                dataset_enum, data_path, sentencetype_enum, numcausal_enum
-            )
+            ds = _load_data_unicausal_span_detection(data_path)
         else:  # pragma: no cover
             raise NotImplementedError()
         test_ptn: re.Pattern = re.compile(r"wsj_(00|01|22|23|24).+")
         ds_test = ds.filter(
             lambda x: test_ptn.match(x["doc_id"]) or x["doc_id"] == "Article247_327.ann"
+        )
+        ds_test = _filter_data(
+            ds_test,
+            task_enum=task_enum,
+            dataset_enum=dataset_enum,
+            numcausal_enum=numcausal_enum,
+            sentencetype_enum=sentencetype_enum,
         )
         ds_train_val = ds.filter(
             lambda x: not test_ptn.match(x["doc_id"])
@@ -214,17 +224,20 @@ def load_data_unicausal(
         data_path: str = os.path.join(data_dir, "pdtb.csv")
         ds: Dataset
         if task_enum == TaskType.sequence_classification:
-            ds = _load_data_unicausal_sequence_classification(
-                dataset_enum, data_path, sentencetype_enum
-            )
+            ds = _load_data_unicausal_sequence_classification(data_path)
         elif task_enum == TaskType.span_detection:
-            ds = _load_data_unicausal_span_detection(
-                dataset_enum, data_path, sentencetype_enum, numcausal_enum
-            )
+            ds = _load_data_unicausal_span_detection(data_path)
         else:  # pragma: no cover
             raise NotImplementedError()
         test_ptn: re.Pattern = re.compile(r"wsj_(00|01|22|23|24).+")
         ds_test = ds.filter(lambda x: test_ptn.match(x["doc_id"]))
+        ds_test = _filter_data(
+            ds_test,
+            task_enum=task_enum,
+            dataset_enum=dataset_enum,
+            numcausal_enum=numcausal_enum,
+            sentencetype_enum=sentencetype_enum,
+        )
         ds_train_val = ds.filter(lambda x: not test_ptn.match(x["doc_id"]))
     else:
         dataset_path_prefix: str
@@ -243,24 +256,26 @@ def load_data_unicausal(
         )
         test_data_path: str = os.path.join(data_dir, f"{dataset_path_prefix}_test.csv")
         ds_train_val: Dataset
+        ds_test: Dataset
         if task_enum == TaskType.sequence_classification:
             ds_train_val = _load_data_unicausal_sequence_classification(
-                dataset_enum, train_val_data_path, sentencetype_enum
+                train_val_data_path
             )
-            ds_train_val = cast_column_to_int(ds_train_val, "labels")
-            ds_test = _load_data_unicausal_sequence_classification(
-                dataset_enum, test_data_path, sentencetype_enum
-            )
-            ds_test = cast_column_to_int(ds_test, "labels")
+            ds_test = _load_data_unicausal_sequence_classification(test_data_path)
         elif task_enum == TaskType.span_detection:
-            ds_train_val = _load_data_unicausal_span_detection(
-                dataset_enum, train_val_data_path, sentencetype_enum, numcausal_enum
-            )
-            ds_test = _load_data_unicausal_span_detection(
-                dataset_enum, test_data_path, sentencetype_enum, numcausal_enum
-            )
-        else:  # pragma: no cover
-            raise NotImplementedError()
+            ds_train_val = _load_data_unicausal_span_detection(train_val_data_path)
+            ds_test = _load_data_unicausal_span_detection(test_data_path)
+
+        ds_test = _filter_data(
+            ds_test,
+            task_enum=task_enum,
+            dataset_enum=dataset_enum,
+            numcausal_enum=numcausal_enum,
+            sentencetype_enum=sentencetype_enum,
+        )
+        if task_enum == TaskType.sequence_classification:
+            ds_train_val = cast_column_to_int(ds_train_val, "labels")
+            ds_test = cast_column_to_int(ds_test, "labels")
     valid_size: int
     if len(ds_test) * 4 < len(ds_train_val):
         valid_size = len(ds_test)

@@ -14,9 +14,9 @@ nltk.download("punkt")
 
 def _filter_data_by_num_sent(ds: Dataset, sentencetype_enum: Enum) -> Dataset:
     if sentencetype_enum == SentenceType.intra:
-        ds = ds.filter(lambda x: len(nltk.sent_tokenize(x["Text"])) == 1)
+        ds = ds.filter(lambda x: len(nltk.sent_tokenize(x["text"])) == 1)
     elif sentencetype_enum == SentenceType.inter:
-        ds = ds.filter(lambda x: len(nltk.sent_tokenize(x["Text"])) >= 2)
+        ds = ds.filter(lambda x: len(nltk.sent_tokenize(x["text"])) >= 2)
     elif sentencetype_enum == SentenceType.all:
         pass
     else:  # pragma: no cover
@@ -51,11 +51,9 @@ def load_data_fincausal(
     ds: Dataset
     if task_enum == TaskType.sequence_classification:
         ds = Dataset.from_pandas(df.drop_duplicates(subset=["Text"]))
-        ds = _filter_data_by_num_sent(ds, sentencetype_enum)
         ds = ds.rename_columns({"Text": "text", "Gold": "labels"})
     elif task_enum == TaskType.span_detection:
         ds = Dataset.from_pandas(df.drop_duplicates(subset=["Text"], keep=False))
-        ds = _filter_data_by_num_sent(ds, sentencetype_enum)
 
         def tokenize_by_word(example: dict[str, Any]) -> dict[str, Any]:
             example["tokens"] = nltk.tokenize.word_tokenize(example["Text"])
@@ -99,4 +97,5 @@ def load_data_fincausal(
     ds_valid: Dataset
     ds_test: Dataset
     ds_train, ds_valid, ds_test = split_train_valid_test_dataset(ds, seed)
+    ds_test = _filter_data_by_num_sent(ds_test, sentencetype_enum)
     return ds_train, ds_valid, ds_test

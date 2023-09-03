@@ -7,7 +7,7 @@ import pandas as pd
 from datasets import Dataset
 from transformers.models.bert_japanese import MecabTokenizer
 
-from .. import DatasetType, SpanTags, SpanTagsFormat, TaskType
+from .. import DatasetType, NumCausalType, SpanTags, SpanTagsFormat, TaskType
 from .split_dataset import split_train_valid_test_dataset
 
 
@@ -73,9 +73,7 @@ def is_nested_causal(text: str) -> bool:
         raise AssertionError(f"Error with text: {text}")
 
 
-def load_and_process_span_jpfinresults(
-    fileprefix: str, data_dir: str, numcausal_enum: Enum
-) -> Dataset:
+def load_and_process_span_jpfinresults(fileprefix: str, data_dir: str) -> Dataset:
     df: pd.DataFrame = pd.read_json(
         os.path.join(data_dir, f"kessan/{fileprefix}.jsonl"),
         orient="records",
@@ -171,18 +169,16 @@ def load_data_jpfin(
         ds: Dataset = Dataset.from_pandas(df)
         ds_train, ds_valid, ds_test = split_train_valid_test_dataset(ds, seed)
     elif task_enum == TaskType.span_detection:
-        if dataset_enum == DatasetType.jpfinresults:
-            ds_train = load_and_process_span_jpfinresults(
-                "train", data_dir, numcausal_enum
-            )
-            ds_valid = load_and_process_span_jpfinresults(
-                "dev", data_dir, numcausal_enum
-            )
-            ds_test = load_and_process_span_jpfinresults(
-                "test", data_dir, numcausal_enum
-            )
-        else:  # pragma: no cover
-            raise NotImplementedError()
+        assert dataset_enum == DatasetType.jpfinresults
+        ds_train = load_and_process_span_jpfinresults("train", data_dir)
+        ds_valid = load_and_process_span_jpfinresults("dev", data_dir)
+        ds_test = load_and_process_span_jpfinresults("test", data_dir)
+        # filter
+        tag_b1: str = SpanTagsFormat.cause_begin.format(1)
+        if numcausal_enum == NumCausalType.single:
+            ds_test = ds_test.filter(lambda x: tag_b1 not in x["tagged_text"])
+        elif numcausal_enum == NumCausalType.multi:
+            ds_test = ds_test.filter(lambda x: tag_b1 in x["tagged_text"])
     else:  # pragma: no cover
         raise NotImplementedError()
 
