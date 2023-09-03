@@ -261,13 +261,13 @@ def load_data_unicausal(
             )
         else:  # pragma: no cover
             raise NotImplementedError()
-    test_size: int
+    valid_size: int
     if len(ds_test) * 4 < len(ds_train_val):
-        test_size = len(ds_test)
+        valid_size = len(ds_test)
     else:
-        test_size = int(len(ds_train_val) * 0.2)
+        valid_size = int(len(ds_train_val) * 0.2)
     dsd_train_val: DatasetDict = ds_train_val.train_test_split(
-        test_size=test_size, shuffle=True, seed=seed
+        test_size=valid_size, shuffle=True, seed=seed
     )
     ds_train = dsd_train_val["train"]
     ds_valid = dsd_train_val["test"]
