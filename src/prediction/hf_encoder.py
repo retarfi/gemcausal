@@ -25,6 +25,7 @@ from .metrics import compute_exact_match, load_metrics
 from .. import (
     DatasetType,
     NumCausalType,
+    PlicitType,
     SentenceType,
     TaskType,
     assert_dataset_task_pair,
@@ -185,8 +186,9 @@ def predict(args: Namespace) -> None:
     train_batch_size: int = args.train_batch_size
     eval_batch_size: int = args.eval_batch_size
     max_epochs: int = args.max_epochs
-    filter_num_sent: Optional[str] = args.filter_num_sent
-    filter_num_causal: Optional[str] = args.filter_num_causal
+    filter_num_sent: str = args.filter_num_sent
+    filter_num_causal: str = args.filter_num_causal
+    filter_plicit_type: str = args.filter_plicit_type
 
     assert_dataset_task_pair(dataset_enum=dataset_enum, task_enum=task_enum)
     assert_filter_option(dataset_enum=dataset_enum, args=args)
@@ -195,6 +197,7 @@ def predict(args: Namespace) -> None:
         dataset_enum=dataset_enum,
         sentencetype_enum=SentenceType[filter_num_sent],
         numcausal_enum=NumCausalType[filter_num_causal],
+        plicit_enum=PlicitType[filter_plicit_type],
         data_dir=args.data_dir,
         test_samples=args.test_samples,
         seed=seed,
@@ -332,6 +335,7 @@ def predict(args: Namespace) -> None:
             "dataset_type": dataset_type,
             "intra-/inter-sent": filter_num_sent,
             "single-/multi-causal": filter_num_causal,
+            "ex-/im-plicit": filter_plicit_type,
             "model": model_name,
             "tokenizer": tokenizer_name,
             "lr": lst_lr,

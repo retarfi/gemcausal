@@ -2,6 +2,7 @@ from .logging import logger
 from .setting import (
     DatasetType,
     NumCausalType,
+    PlicitType,
     SentenceType,
     SpanTags,
     SpanTagsFormat,

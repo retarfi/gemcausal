@@ -7,7 +7,7 @@ import pandas as pd
 from datasets import Dataset
 
 from .. import SentenceType, SpanTags, TaskType
-from .split_dataset import split_train_valid_test_dataset
+from .split_dataset import filter_plicit_dataset, split_train_valid_test_dataset
 
 nltk.download("punkt")
 
@@ -25,7 +25,11 @@ def _filter_data_by_num_sent(ds: Dataset, sentencetype_enum: Enum) -> Dataset:
 
 
 def load_data_fincausal(
-    task_enum: Enum, data_dir: str, sentencetype_enum: Enum, seed: int
+    task_enum: Enum,
+    data_dir: str,
+    sentencetype_enum: Enum,
+    plicit_enum: Enum,
+    seed: int,
 ) -> tuple[Dataset, Dataset, Dataset]:
     csv_prefix: str = "fnp2020-fincausal"
     task_id: int
@@ -98,4 +102,6 @@ def load_data_fincausal(
     ds_test: Dataset
     ds_train, ds_valid, ds_test = split_train_valid_test_dataset(ds, seed)
     ds_test = _filter_data_by_num_sent(ds_test, sentencetype_enum)
+    if task_enum == TaskType.span_detection:
+        ds_test = filter_plicit_dataset(ds_test, plicit_enum)
     return ds_train, ds_valid, ds_test

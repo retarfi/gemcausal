@@ -1,6 +1,6 @@
 from argparse import ArgumentParser
 
-from . import DatasetType, NumCausalType, SentenceType, TaskType
+from . import DatasetType, NumCausalType, PlicitType, SentenceType, TaskType
 from .prediction import predict_hf_encoder, predict_openai
 
 
@@ -42,6 +42,15 @@ def add_argument_common(parser: ArgumentParser) -> None:
         help=(
             "If specified, split examples according to whether the sequence has "
             "multiple causal relations"
+        ),
+    )
+    parser.add_argument(
+        "--filter_plicit_type",
+        choices=[x.name for x in PlicitType],
+        default=PlicitType.all.name,
+        help=(
+            "If specified, filter examples according to whether the sequence has "
+            "explicit or implicit causalities"
         ),
     )
 

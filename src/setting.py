@@ -24,6 +24,7 @@ TaskType: EnumMeta = Enum(
 )
 SentenceType: EnumMeta = Enum("Sentence", ("intra", "inter", "all"))
 NumCausalType: EnumMeta = Enum("NumCausal", ("single", "multi", "all"))
+PlicitType: EnumMeta = Enum("Plicit", ("implicit", "explicit", "all"))
 
 DatasetTaskPairs: tuple[tuple[Enum, tuple[Enum]]] = (
     (DatasetType.altlex, (TaskType.sequence_classification, TaskType.span_detection)),
@@ -58,6 +59,24 @@ SpanTags = TagsForSpanDetection(
     effect_end=SpanTagsFormat.effect_end.format(""),
 )
 
+tpl_task_explicit: tuple[Enum] = (
+    DatasetType.because,
+    DatasetType.ctb,
+    DatasetType.esl,
+    DatasetType.pdtb,
+    DatasetType.semeval,
+    DatasetType.fincausal,
+    DatasetType.jpfinresults,
+    DatasetType.jpnikkei,
+)
+tpl_task_implicit: tuple[Enum] = (
+    DatasetType.altlex,
+    DatasetType.esl,
+    DatasetType.pdtb,
+    DatasetType.semeval,
+    DatasetType.fincausal,
+)
+
 
 def assert_dataset_task_pair(dataset_enum: Enum, task_enum: Enum) -> None:
     all_pairs: tuple[Enum, Enum] = (
@@ -70,17 +89,17 @@ def assert_dataset_task_pair(dataset_enum: Enum, task_enum: Enum) -> None:
 
 
 def assert_filter_option(dataset_enum: Enum, args: Namespace) -> None:
-    tpl_task_inter_sent_available: tuple[str] = (
+    tpl_task_inter_sent_available: tuple[Enum] = (
         DatasetType.ctb,
         DatasetType.esl,
         DatasetType.pdtb,
         DatasetType.fincausal,
     )
-    tpl_task_only_inter_sent: tuple[str] = (
+    tpl_task_only_inter_sent: tuple[Enum] = (
         DatasetType.jpfinresults,
         DatasetType.jpnikkei,
     )
-    tpl_task_multi_causal_separate_available: tuple[str] = (
+    tpl_task_multi_causal_separate_available: tuple[Enum] = (
         DatasetType.altlex,
         DatasetType.because,
         DatasetType.pdtb,
@@ -138,3 +157,28 @@ def assert_filter_option(dataset_enum: Enum, args: Namespace) -> None:
                 f"filter_num_causal='{NumCausalType.multi.name}' is not available "
                 f"for {dataset_enum.name}"
             )
+    plicit_enum: Enum = PlicitType[args.filter_plicit_type]
+    if plicit_enum == PlicitType.explicit:
+        assert dataset_enum in tpl_task_explicit
+        if dataset_enum not in tpl_task_implicit:
+            logger.warning(
+                "filter_plicit_type='%s' is not available for %s, "
+                "so force to change to %s",
+                PlicitType.explicit.name,
+                dataset_enum.name,
+                PlicitType.all.name,
+            )
+            args.filter_plicit_type = PlicitType.all.name
+    elif plicit_enum == PlicitType.implicit:
+        assert dataset_enum in tpl_task_implicit
+        if dataset_enum not in tpl_task_explicit:
+            logger.warning(
+                "filter_plicit_type='%s' is not available for %s, "
+                "so force to change to %s",
+                PlicitType.implicit.name,
+                dataset_enum.name,
+                PlicitType.all.name,
+            )
+            args.filter_plicit_type = PlicitType.all.name
+    else:
+        assert plicit_enum == PlicitType.all

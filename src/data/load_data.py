@@ -8,7 +8,7 @@ from .fincausal import load_data_fincausal
 from .japanese import load_data_jpfin
 from .unicausal import load_data_unicausal
 from .reco import load_reco_dataset
-from .. import DatasetType, TaskType, assert_dataset_task_pair, logger
+from .. import DatasetType, PlicitType, TaskType, assert_dataset_task_pair, logger
 
 
 def load_data(
@@ -16,6 +16,7 @@ def load_data(
     dataset_enum: Enum,
     sentencetype_enum: Enum,
     numcausal_enum: Enum,
+    plicit_enum: Enum,
     data_dir: str,
     test_samples: Optional[int] = None,
     seed: int = 42,
@@ -37,6 +38,7 @@ def load_data(
             task_enum=task_enum,
             sentencetype_enum=sentencetype_enum,
             numcausal_enum=numcausal_enum,
+            plicit_enum=plicit_enum,
             data_dir=data_dir,
             seed=seed,
         )
@@ -45,9 +47,11 @@ def load_data(
             task_enum=task_enum,
             data_dir=data_dir,
             sentencetype_enum=sentencetype_enum,
+            plicit_enum=plicit_enum,
             seed=seed,
         )
     elif dataset_enum in (DatasetType.jpfinresults, DatasetType.jpnikkei):
+        assert plicit_enum == PlicitType.all
         ds_train, ds_valid, ds_test = load_data_jpfin(
             dataset_enum=dataset_enum,
             task_enum=task_enum,

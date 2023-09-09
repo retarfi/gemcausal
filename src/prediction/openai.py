@@ -22,6 +22,7 @@ from tqdm import tqdm
 from .. import (
     DatasetType,
     NumCausalType,
+    PlicitType,
     SentenceType,
     TaskType,
     assert_dataset_task_pair,
@@ -112,6 +113,7 @@ def predict(args: Namespace) -> None:
     seed: int = args.seed
     filter_num_sent: str = args.filter_num_sent
     filter_num_causal: str = args.filter_num_causal
+    filter_plicit_type: str = args.filter_plicit_type
 
     assert (
         task_enum == TaskType.span_detection or not args.evaluate_by_word
@@ -126,6 +128,7 @@ def predict(args: Namespace) -> None:
         dataset_enum=dataset_enum,
         sentencetype_enum=SentenceType[filter_num_sent],
         numcausal_enum=NumCausalType[filter_num_causal],
+        plicit_enum=PlicitType[filter_plicit_type],
         data_dir=args.data_dir,
         test_samples=args.test_samples,
         seed=seed,
@@ -358,6 +361,7 @@ def predict(args: Namespace) -> None:
             "dataset_type": dataset_type,
             "intra-/inter-sent": filter_num_sent,
             "single-/multi-causal": filter_num_causal,
+            "ex-/im-plicit": filter_plicit_type,
             "model": model,
             "template": args.template,
             "shot": shot,

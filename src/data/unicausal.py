@@ -7,14 +7,17 @@ import numpy as np
 import pandas as pd
 from datasets import Dataset, DatasetDict, Value, load_dataset
 
+from .split_dataset import filter_plicit_dataset
 from .. import (
     DatasetType,
     NumCausalType,
+    PlicitType,
     SentenceType,
     SpanTags,
     SpanTagsFormat,
     TaskType,
 )
+from ..setting import tpl_task_explicit, tpl_task_implicit
 
 
 def cast_column_to_int(ds: Dataset, column: str) -> Dataset:
@@ -149,8 +152,22 @@ def _filter_data_by_num_causal(ds: Dataset, numcausal_enum: Enum) -> Dataset:
         groups = df.groupby(["corpus", "doc_id", "sent_id"])
         df = groups.apply(custom_agg).reset_index(drop=True)
         # Drop nested causal with primitive way
-        df.dropna(subset=["tagged_text"])
+        df.dropna(subset=["tagged_text"], inplace=True)
     return Dataset.from_pandas(df, preserve_index=False)
+
+
+def _filter_data_by_plicit(
+    ds: Dataset, dataset_enum: Enum, plicit_enum: Enum
+) -> Dataset:
+    if plicit_enum == PlicitType.explicit:
+        assert dataset_enum in tpl_task_explicit
+        ds = filter_plicit_dataset(ds, plicit_enum)
+    elif plicit_enum == PlicitType.implicit:
+        assert dataset_enum in tpl_task_implicit
+        ds = filter_plicit_dataset(ds, plicit_enum)
+    else:
+        assert plicit_enum == PlicitType.all
+    return ds
 
 
 def _load_data_unicausal_sequence_classification(data_path: str) -> Dataset:
@@ -179,12 +196,17 @@ def _filter_data(
     dataset_enum: Enum,
     numcausal_enum: Enum,
     sentencetype_enum: Enum,
+    plicit_enum: Enum,
 ) -> Dataset:
     if task_enum == TaskType.span_detection:
         ds = _filter_data_by_num_causal(ds, numcausal_enum=numcausal_enum)
     ds = _filter_data_by_num_sent(
         ds, dataset_enum=dataset_enum, sentencetype_enum=sentencetype_enum
     )
+    if task_enum == TaskType.span_detection:
+        ds = _filter_data_by_plicit(
+            ds, dataset_enum=dataset_enum, plicit_enum=plicit_enum
+        )
     return ds
 
 
@@ -193,6 +215,7 @@ def load_data_unicausal(
     task_enum: Enum,
     sentencetype_enum: Enum,
     numcausal_enum: Enum,
+    plicit_enum: Enum,
     data_dir: str,
     seed: int,
 ) -> tuple[Dataset, Dataset, Dataset]:
@@ -215,6 +238,7 @@ def load_data_unicausal(
             dataset_enum=dataset_enum,
             numcausal_enum=numcausal_enum,
             sentencetype_enum=sentencetype_enum,
+            plicit_enum=plicit_enum,
         )
         ds_train_val = ds.filter(
             lambda x: not test_ptn.match(x["doc_id"])
@@ -237,6 +261,7 @@ def load_data_unicausal(
             dataset_enum=dataset_enum,
             numcausal_enum=numcausal_enum,
             sentencetype_enum=sentencetype_enum,
+            plicit_enum=plicit_enum,
         )
         ds_train_val = ds.filter(lambda x: not test_ptn.match(x["doc_id"]))
     else:
@@ -265,13 +290,13 @@ def load_data_unicausal(
         elif task_enum == TaskType.span_detection:
             ds_train_val = _load_data_unicausal_span_detection(train_val_data_path)
             ds_test = _load_data_unicausal_span_detection(test_data_path)
-
         ds_test = _filter_data(
             ds_test,
             task_enum=task_enum,
             dataset_enum=dataset_enum,
             numcausal_enum=numcausal_enum,
             sentencetype_enum=sentencetype_enum,
+            plicit_enum=plicit_enum,
         )
         if task_enum == TaskType.sequence_classification:
             ds_train_val = cast_column_to_int(ds_train_val, "labels")
