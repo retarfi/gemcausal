@@ -3,31 +3,23 @@ import itertools
 import json
 import os
 import random
+import re
 from argparse import Namespace
 from enum import Enum
-from typing import Any, Dict, Union
+from typing import Any, Dict, List, Set, Tuple, Union
 
 import datasets
 import numpy as np
 import openai
 from datasets import Dataset, DatasetDict
-from sklearn.metrics import (
-    accuracy_score,
-    confusion_matrix,
-    precision_recall_fscore_support,
-)
+from sklearn.metrics import (accuracy_score, confusion_matrix,
+                             precision_recall_fscore_support)
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 from tqdm import tqdm
+from transformers.models.bert_japanese import MecabTokenizer
 
-from .. import (
-    DatasetType,
-    NumCausalType,
-    PlicitType,
-    SentenceType,
-    TaskType,
-    assert_dataset_task_pair,
-    logger,
-)
+from .. import (DatasetType, NumCausalType, PlicitType, SentenceType, TaskType,
+                assert_dataset_task_pair, logger)
 from ..data.load_data import load_data
 from ..setting import assert_filter_option
 
@@ -54,6 +46,23 @@ def read_template(path: str) -> dict[str, str]:
     left_keys: set[str] = required_keys - set(template.keys())
     assert len(left_keys) == 0, f"Following keys are not in template: {left_keys}"
     return template
+
+
+def extract_formatted_spans(sequence: str) -> Tuple[str, str]:
+    cause_marker_pattern = r"<c(\d*)>(.*?)</c(\d*)>"
+    effect_marker_pattern = r"<e(\d*)>(.*?)</e(\d*)>"
+
+    def extract_and_format(pattern: str) -> str:
+        spans: List[str] = [
+            match.group(2).strip() for match in re.finditer(pattern, sequence)
+        ]
+        formatted_spans: str = " ".join([f"[{span}]" for span in spans])
+        return formatted_spans
+
+    cause_spans_with_mark: str = extract_and_format(cause_marker_pattern)
+    effect_spans_with_mark: str = extract_and_format(effect_marker_pattern)
+
+    return cause_spans_with_mark, effect_spans_with_mark
 
 
 @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
@@ -99,6 +108,37 @@ def compute_metrics(
     for i in range(len(arr)):
         result[f"accuracy_{i}"] = arr[i, i]
     return result
+
+
+def compute_span_metrics(true_span: str, pred_span: str) -> Tuple[float, float, float]:
+    def is_english(text: str) -> bool:
+        for char in text:
+            if "a" <= char <= "z" or "A" <= char <= "Z":
+                return True
+        return False
+
+    def tokenize_text(span: str) -> List[str]:
+        word_tokenizer = MecabTokenizer(mecab_dic="ipadic")
+        if is_english(span):
+            return span.split(" ")
+        else:
+            return word_tokenizer.tokenize(span)
+
+    true_tokens: Set[str] = set(tokenize_text(true_span))
+    pred_tokens: Set[str] = set(tokenize_text(pred_span))
+
+    tp: int = len(true_tokens & pred_tokens)
+    fp: int = len(pred_tokens - true_tokens)
+    fn: int = len(true_tokens - pred_tokens)
+
+    if tp == 0:
+        return 0.0, 0.0, 0.0
+
+    precision: float = tp / (tp + fp)
+    recall: float = tp / (tp + fn)
+    f1: float = 2 * (precision * recall) / (precision + recall)
+
+    return precision, recall, f1
 
 
 def predict(args: Namespace) -> None:
@@ -181,7 +221,10 @@ def predict(args: Namespace) -> None:
         else:
             for i in range(shot):
                 annotation += template["format_text"].format(dsd_icl[i]["text"])
-                annotation += template["format_class"].format(dsd_icl[i]["tagged_text"])
+                cause_spans, effect_spans = extract_formatted_spans(
+                    dsd_icl[i]["tagged_text"]
+                )
+                annotation += template["format_class"].format(cause_spans, effect_spans)
 
             def format_prompt(example: dict[str, Any]) -> dict[str, Any]:
                 prompt: str = template["task_description"]
@@ -328,27 +371,108 @@ def predict(args: Namespace) -> None:
             )
         else:
 
-            def extract_label(example: dict[str, Any]) -> dict[str, Any]:
-                example["pred"] = example["output"].replace(
-                    template["format_class"].split("{}")[0], ""
+            def extract_label(example: Dict[str, Any]) -> Dict[str, str]:
+                def join_spans(text: str) -> str:
+                    extracted = re.findall(r"\[([^\]]+)\]", text)
+                    if not extracted:
+                        return text
+                    else:
+                        return " ".join(extracted)  # white spaceでつなげて返す
+
+                def extract_spans_from_output(
+                    output: str,
+                ) -> Tuple[str, str]:
+                    lines = output.split("\n")
+                    cause_spans: str = ""
+                    effect_spans: str = ""
+
+                    _count: int = 0
+                    for line in lines:
+                        if re.match(r"Causes:", line) or (
+                            _count == 0 and ("[" in line or "]" in line)
+                        ):
+                            _count += 1
+                            cause_spans = line.replace("Causes:", "")
+                        elif re.match(r"Effects:", line) or (
+                            _count == 1 and ("[" in line or "]" in line)
+                        ):
+                            _count += 1
+                            effect_spans = line.replace("Effects:", "")
+
+                    return cause_spans, effect_spans
+
+                true_cause_spans, true_effect_spans = extract_formatted_spans(
+                    example["tagged_text"]
                 )
+                pred_cause_spans, pred_effect_spans = extract_spans_from_output(
+                    example["output"]
+                )
+
+                example["true_cause"] = join_spans(true_cause_spans)
+                example["true_effect"] = join_spans(true_effect_spans)
+                example["pred_cause"] = join_spans(pred_cause_spans)
+                example["pred_effect"] = join_spans(pred_effect_spans)
+
                 return example
 
             ds_output = ds_test.map(extract_label)
             result = {
                 "exact_match": sum(
                     [
-                        t == p
-                        for t, p in zip(ds_output["tagged_text"], ds_output["pred"])
+                        true_cause.strip() == pred_cause.strip()
+                        and true_effect.strip() == pred_effect.strip()
+                        for true_cause, pred_cause, true_effect, pred_effect in zip(
+                            ds_output["true_cause"],
+                            ds_output["pred_cause"],
+                            ds_output["true_effect"],
+                            ds_output["pred_effect"],
+                        )
                     ]
                 )
                 / len(ds_output)
             }
+
+            def compute_metrics(true_data, pred_data):
+                return [
+                    sum(col) / len(col)
+                    for col in zip(
+                        *[
+                            compute_span_metrics(true_span, pred_span)
+                            for true_span, pred_span in zip(true_data, pred_data)
+                        ]
+                    )
+                ]
+
+            (
+                result["cause_precision"],
+                result["cause_recall"],
+                result["cause_f1"],
+            ) = compute_metrics(ds_output["true_cause"], ds_output["pred_cause"])
+            (
+                result["effect_precision"],
+                result["effect_recall"],
+                result["effect_f1"],
+            ) = compute_metrics(ds_output["true_effect"], ds_output["pred_effect"])
+            result["precision"], result["recall"], result["f1"] = (
+                (result["cause_precision"] + result["effect_precision"]) / 2,
+                (result["cause_recall"] + result["effect_recall"]) / 2,
+                (result["cause_f1"] + result["effect_f1"]) / 2,
+            )
+
             # output prompt result
             ds_output = ds_output.remove_columns(
                 list(
                     set(ds_test.column_names)
-                    - {"example_id", "text", "tagged_text", "output", "pred"}
+                    - {
+                        "example_id",
+                        "text",
+                        "tagged_text",
+                        "output",
+                        "true_cause",
+                        "true_effect",
+                        "pred_cause",
+                        "pred_effect",
+                    }
                 )
             )
         logger.info("Result: %s", result)

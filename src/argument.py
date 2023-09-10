@@ -73,7 +73,7 @@ def add_argument_openai(parser: ArgumentParser) -> None:
         "--template", help="Json path of prompt template", required=True
     )
     parser.add_argument(
-        "--shot", help="Number of shots", choices=[1, 2, 3], required=True, type=int
+        "--shot", help="Number of shots", choices=[0, 1, 2, 3], required=True, type=int
     )
     parser.add_argument(
         "--evaluate_by_word",
