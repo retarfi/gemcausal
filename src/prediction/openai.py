@@ -369,9 +369,17 @@ def predict(args: Namespace) -> None:
         },
     }
     filehead: str = (
-        datetime.datetime.now().strftime("%Y%m%d_%H%M_")
-        + f"{task_type}_{dataset_type}_{filter_num_sent}_{filter_num_causal}"
+        datetime.datetime.now().strftime("%Y%m%d_%H%M_") + f"{task_type}_{dataset_type}"
     )
+    if filter_num_sent == "all" and filter_num_causal == "all" and filter_plicit_type == "all":
+        filehead += "_all"
+    else:
+        if filter_num_sent != "all":
+            filehead += f"_{filter_num_sent}"
+        if filter_num_causal != "all":
+            filehead += f"_{filter_num_causal}"
+        if filter_plicit_type != "all":
+            filehead += f"_{filter_plicit_type}"
     if args.evaluate_by_word:
         filehead += "_ebw"
     filehead += f"_{model}"
