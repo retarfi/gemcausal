@@ -325,9 +325,19 @@ def predict(args: Namespace) -> None:
     logger.info("Best result: %s", best_result)
 
     filehead: str = (
-        datetime.datetime.now().strftime("%Y%m%d_%H%M_")
-        + f"{task_type}_{dataset_type}_{filter_num_sent}_{filter_num_causal}_hf-encoder"
+        datetime.datetime.now().strftime("%Y%m%d_%H%M_") + f"{task_type}_{dataset_type}"
     )
+    if filter_num_sent == "all" and filter_num_causal == "all" and filter_plicit_type == "all":
+        filehead += "_all"
+    else:
+        if filter_num_sent != "all":
+            filehead += f"_{filter_num_sent}"
+        if filter_num_causal != "all":
+            filehead += f"_{filter_num_causal}"
+        if filter_plicit_type != "all":
+            filehead += f"_{filter_plicit_type}"
+    filehead += "_hf-encoder"
+    
     result: list[str, Union[list[str], str]] = {
         **best_result,
         **{
