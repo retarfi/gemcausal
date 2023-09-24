@@ -1,5 +1,5 @@
 {
-    "task_description": "Please perform a causal span detection according to the following rules\n1. The text is split into tokens as shown on the next line.\n2. Tokens are separated by / (slash). \n3. For each token, determine which tag is appropriate. \n4. If the token is the beginning of the cause, the inside cause, or the inside effect, label it as B-C, I-C, B-E, or I-E respectively.\n5. Otherwise, label it as O, which means outside of cause-effect.\n6. Classify from the beginning of the token, write the classification of one token per line, and stop after the classifing the last token.\n\n",
+    "task_description": "Please perform a causal span detection according to the following rules\n1. The text is split into tokens as shown on the next line.\n2. Tokens are separated by / (slash). \n3. For each token, determine which tag is appropriate. \n4. If the token is the beginning of the cause, the inside cause, the beginning of the effect or the inside effect, label it as B-C, I-C, B-E, or I-E respectively.\n5. Otherwise, label it as O, which means outside of cause-effect.\n6. Classify from the beginning of the token, write the classification of one token per line, and stop after the classifing the last token.\n\n",
     "header_example": "Annotation Examples:\n",
     "format_text": "[Text] {}\n[Tokens] {}\n",
     "format_class": "[Labels]\n{}\n",

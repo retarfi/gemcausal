@@ -327,7 +327,11 @@ def predict(args: Namespace) -> None:
     filehead: str = (
         datetime.datetime.now().strftime("%Y%m%d_%H%M_") + f"{task_type}_{dataset_type}"
     )
-    if filter_num_sent == "all" and filter_num_causal == "all" and filter_plicit_type == "all":
+    if (
+        filter_num_sent == "all"
+        and filter_num_causal == "all"
+        and filter_plicit_type == "all"
+    ):
         filehead += "_all"
     else:
         if filter_num_sent != "all":
@@ -337,7 +341,7 @@ def predict(args: Namespace) -> None:
         if filter_plicit_type != "all":
             filehead += f"_{filter_plicit_type}"
     filehead += "_hf-encoder"
-    
+
     result: list[str, Union[list[str], str]] = {
         **best_result,
         **{

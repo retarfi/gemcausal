@@ -3,9 +3,10 @@ import itertools
 import json
 import os
 import random
+import re
 from argparse import Namespace
 from enum import Enum
-from typing import Any, Dict, Union
+from typing import Any, Dict, List, Set, Tuple, Union
 
 import datasets
 import numpy as np
@@ -18,6 +19,7 @@ from sklearn.metrics import (
 )
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 from tqdm import tqdm
+from transformers.models.bert_japanese import MecabTokenizer
 
 from .. import (
     DatasetType,
@@ -54,6 +56,17 @@ def read_template(path: str) -> dict[str, str]:
     left_keys: set[str] = required_keys - set(template.keys())
     assert len(left_keys) == 0, f"Following keys are not in template: {left_keys}"
     return template
+
+
+def extract_spans_with_mark(text: str) -> Tuple[str, str]:
+    cause_marker_pattern = r"<c(\d*)>(.*?)</c(\d*)>"
+    effect_marker_pattern = r"<e(\d*)>(.*?)</e(\d*)>"
+
+    extract = lambda pattern: " ".join(
+        [f"[{match.group(2).strip()}]" for match in re.finditer(pattern, text)]
+    )
+
+    return extract(cause_marker_pattern), extract(effect_marker_pattern)
 
 
 @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
@@ -181,7 +194,10 @@ def predict(args: Namespace) -> None:
         else:
             for i in range(shot):
                 annotation += template["format_text"].format(dsd_icl[i]["text"])
-                annotation += template["format_class"].format(dsd_icl[i]["tagged_text"])
+                cause_spans, effect_spans = extract_spans_with_mark(
+                    dsd_icl[i]["tagged_text"]
+                )
+                annotation += template["format_class"].format(cause_spans, effect_spans)
 
             def format_prompt(example: dict[str, Any]) -> dict[str, Any]:
                 prompt: str = template["task_description"]
@@ -328,27 +344,134 @@ def predict(args: Namespace) -> None:
             )
         else:
 
-            def extract_label(example: dict[str, Any]) -> dict[str, Any]:
-                example["pred"] = example["output"].replace(
-                    template["format_class"].split("{}")[0], ""
+            def remove_marks(text: str) -> str:
+                extracted = re.findall(r"\[([^\]]+)\]", text)
+                return " ".join(extracted) if extracted else text
+
+            def extract_span(example: Dict[str, Any]) -> Dict[str, str]:
+                lines = example["output"].split("\n")
+
+                cause_spans, effect_spans = "", ""
+                for line in lines:
+                    if "Causes:" in line:
+                        cause_spans = line.replace("Causes:", "")
+                    elif "Effects:" in line:
+                        effect_spans = line.replace("Effects:", "")
+
+                true_cause_spans, true_effect_spans = extract_spans_with_mark(
+                    example["tagged_text"]
                 )
+
+                example["true_cause"] = remove_marks(true_cause_spans)
+                example["true_effect"] = remove_marks(true_effect_spans)
+                example["pred_cause"] = remove_marks(cause_spans)
+                example["pred_effect"] = remove_marks(effect_spans)
+
                 return example
 
-            ds_output = ds_test.map(extract_label)
+            ds_output = ds_test.map(extract_span)
             result = {
                 "exact_match": sum(
                     [
-                        t == p
-                        for t, p in zip(ds_output["tagged_text"], ds_output["pred"])
+                        true_cause.strip() == pred_cause.strip()
+                        and true_effect.strip() == pred_effect.strip()
+                        for true_cause, pred_cause, true_effect, pred_effect in zip(
+                            ds_output["true_cause"],
+                            ds_output["pred_cause"],
+                            ds_output["true_effect"],
+                            ds_output["pred_effect"],
+                        )
                     ]
                 )
                 / len(ds_output)
             }
+
+            word_tokenizer = MecabTokenizer(mecab_dic="ipadic")
+
+            def tokenize_text(span: str) -> List[str]:
+                if dataset_enum == DatasetType.jpfinresults:
+                    return word_tokenizer.tokenize(span)
+                elif dataset_enum in (
+                    DatasetType.altlex,
+                    DatasetType.because,
+                    DatasetType.pdtb,
+                    DatasetType.fincausal,
+                ):
+                    return span.split(" ")
+                else:  # pragma: no cover
+                    raise NotImplementedError()
+
+            def compute_f1_score(
+                true_span: str, pred_span: str
+            ) -> Tuple[float, float, float]:
+                token_sets = {
+                    span: set(tokenize_text(span)) for span in (true_span, pred_span)
+                }
+                true_tokens, pred_tokens = token_sets[true_span], token_sets[pred_span]
+
+                tp, fp, fn = (
+                    len(true_tokens & pred_tokens),
+                    len(pred_tokens - true_tokens),
+                    len(true_tokens - pred_tokens),
+                )
+
+                # if the lengths of the predicted and ground truth spans are both zero,
+                # then F1score is 1.0
+                if not true_tokens and not pred_tokens:
+                    return 1.0, 1.0, 1.0
+
+                if tp == 0:
+                    return 0.0, 0.0, 0.0
+
+                precision, recall = tp / (tp + fp), tp / (tp + fn)
+                f1 = 2 * (precision * recall) / (precision + recall)
+
+                return precision, recall, f1
+
+            result["cause_precision"], result["cause_recall"], result["cause_f1"] = [
+                sum(col) / len(col)
+                for col in zip(
+                    *[
+                        compute_f1_score(true_span, pred_span)
+                        for true_span, pred_span in zip(
+                            ds_output["true_cause"], ds_output["pred_cause"]
+                        )
+                    ]
+                )
+            ]
+
+            result["effect_precision"], result["effect_recall"], result["effect_f1"] = [
+                sum(col) / len(col)
+                for col in zip(
+                    *[
+                        compute_f1_score(true_span, pred_span)
+                        for true_span, pred_span in zip(
+                            ds_output["true_effect"], ds_output["pred_effect"]
+                        )
+                    ]
+                )
+            ]
+
+            result["precision"], result["recall"], result["f1"] = (
+                (result["cause_precision"] + result["effect_precision"]) / 2,
+                (result["cause_recall"] + result["effect_recall"]) / 2,
+                (result["cause_f1"] + result["effect_f1"]) / 2,
+            )
+
             # output prompt result
             ds_output = ds_output.remove_columns(
                 list(
                     set(ds_test.column_names)
-                    - {"example_id", "text", "tagged_text", "output", "pred"}
+                    - {
+                        "example_id",
+                        "text",
+                        "tagged_text",
+                        "output",
+                        "true_cause",
+                        "true_effect",
+                        "pred_cause",
+                        "pred_effect",
+                    }
                 )
             )
         logger.info("Result: %s", result)
@@ -371,7 +494,11 @@ def predict(args: Namespace) -> None:
     filehead: str = (
         datetime.datetime.now().strftime("%Y%m%d_%H%M_") + f"{task_type}_{dataset_type}"
     )
-    if filter_num_sent == "all" and filter_num_causal == "all" and filter_plicit_type == "all":
+    if (
+        filter_num_sent == "all"
+        and filter_num_causal == "all"
+        and filter_plicit_type == "all"
+    ):
         filehead += "_all"
     else:
         if filter_num_sent != "all":
