@@ -36,6 +36,9 @@ from ..data.reco import preprocess_reco_for_chain_classification
 from ..setting import assert_filter_option
 
 
+THIS_DIR: str = os.path.dirname(os.path.abspath(__file__))
+
+
 def preprocess_for_sequence_classification(
     dsd: DatasetDict, tokenizer: PreTrainedTokenizer, model_name: str
 ) -> tuple[DatasetDict, PretrainedConfig]:
@@ -67,11 +70,10 @@ def preprocess_for_sequence_classification(
 def preprocess_for_span_detection(
     dsd: DatasetDict, tokenizer: PreTrainedTokenizer, model_name: str
 ) -> tuple[DatasetDict, PretrainedConfig]:
-    label_list: list[str] = list(
-        set(itertools.chain.from_iterable(dsd["train"]["tags"]))
-    )
+    label_list: list[str] = ["O", "I-C", "I-E", "B-C", "B-E"]
+    assert set(itertools.chain.from_iterable(dsd["train"]["tags"])) == set(label_list)
     label_to_id: dict[str, int] = {l: i for i, l in enumerate(label_list)}
-    b_to_i_label: list[str] = []
+    b_to_i_label: list[int] = []
     for idx, label in enumerate(label_list):
         if label.startswith("B-") and label.replace("B-", "I-") in label_list:
             b_to_i_label.append(label_list.index(label.replace("B-", "I-")))
@@ -99,8 +101,10 @@ def preprocess_for_span_detection(
         )
         max_length = config.max_position_embeddings
 
-    def tokenize_and_align_tags(examples: dict[str, Any]) -> dict[str, Any]:
-        tokenized_inputs: dict[str, Any] = tokenizer(
+    def tokenize_and_align_tags(
+        examples: dict[str, list[Union[int, str, list[str]]]]
+    ) -> dict[str, list[Any]]:
+        tokenized_inputs: dict[str, list[int]] = tokenizer(
             examples["tokens"],
             max_length=max_length,
             padding="max_length",
@@ -109,7 +113,7 @@ def preprocess_for_span_detection(
             # (with a label for each word).
             is_split_into_words=True,
         )
-        tags: list[str] = []
+        tags: list[list[int]] = []
         for i, label in enumerate(examples["tags"]):
             word_ids: list[Optional[int]]
             if tokenizer.is_fast:
@@ -218,8 +222,13 @@ def predict(args: Namespace) -> None:
         raise NotImplementedError()
 
     lst_grid_results: list[dict[str, float]] = []
-    lst_metrics: list[str] = ["f1", "precision", "recall", "accuracy"]
-    metrics: CombinedEvaluations = load_metrics(lst_metrics)
+    lst_metrics_load: list[str] = ["accuracy"]
+    if task_enum == TaskType.span_detection:
+        lst_metrics_load.append(os.path.join(THIS_DIR, "span_f1_precision_recall.py"))
+    else:
+        lst_metrics_load.extend(["f1", "precision", "recall"])
+    metrics: CombinedEvaluations = load_metrics(lst_metrics_load)
+    lst_metrics: list[str] = ["accuracy", "f1", "precision", "recall"]
     if task_enum == TaskType.span_detection:
         lst_metrics.append("exact_match")
     for lr in lst_lr:
