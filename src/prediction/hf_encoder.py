@@ -144,21 +144,17 @@ def preprocess_for_span_detection(
                             cand_subword = subwords.pop(0)
                     else:  # pragma: no cover
                         raise ValueError(examples["tokens"][i])
-            previous_word_idx: Optional[int] = None
+            # previous_word_idx: Optional[int] = None
             label_ids: list[int] = []
             for word_idx in word_ids:
                 # Special tokens have a word id that is None. We set the label to -100
-                # so they are automatically
-                # ignored in the loss function.
+                # so they are automatically ignored in the loss function.
                 if word_idx is None:
                     label_ids.append(-100)
-                # We set the label for the first token of each word.
-                elif word_idx != previous_word_idx:
-                    label_ids.append(label_to_id[label[word_idx]])
-                # For the other tokens in a word, we set the label to -100
                 else:
                     label_ids.append(b_to_i_label[label_to_id[label[word_idx]]])
-                previous_word_idx = word_idx
+                # previous_word_idx = word_idx
+            assert len(set(label_ids) - {0, 1, 2, -100}) == 0, label_ids
             tags.append(label_ids)
         tokenized_inputs["labels"] = tags
         return tokenized_inputs
