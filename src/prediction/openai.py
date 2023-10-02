@@ -251,9 +251,11 @@ def predict(args: Namespace) -> None:
         ds_output = ds_test.cast(features)
 
         def extract_label(example: dict[str, Any]) -> dict[str, Any]:
-            example["pred"] = example["output"].replace(
-                template["format_class"].split("{}")[0], ""
-            )
+            match = re.search(r"N(\d+)", example["output"])
+            if match:
+                example["pred"] = match.group(1)
+            else:
+                example["pred"] = "-1"  # no match
             return example
 
         ds_output = ds_output.map(extract_label)
