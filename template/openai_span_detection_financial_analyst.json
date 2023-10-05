@@ -1,0 +1,7 @@
+{
+    "task_description": "A causal relationship refers to a connection in which one event or actor causes another, indicating that the two events or actors are interlinked such that one influences the other.\n You are a financial analyst. Please perform the Causal Span Detection task based on the following rules, ensuring no irrelevant outputs:\n1. Extract spans that indicate the causes.\n2. Extract spans that indicate the effects.\n\nAs the cause or effect spans might not be continuous, or there could be multiple instances, please annotate them in the following format:\nCauses: [span1] [span2] [span3] [span4] [span5]\nEffects: [span6] [span7] [span8] [span9] [span10]\n\n",
+    "header_example": "Annotation Examples:\n",
+    "format_text": "Text: {}\n",
+    "format_class": "Causes: {}\nEffects: {}\n\n",
+    "question": "According to the policy above, please add the appropriate tags in the following text.\n"
+}
