@@ -1,6 +1,6 @@
-# gemcausal
 
-Generator or Encoder Model for Causal tasks
+<h1 align="center">GemCausal: Generator or Encoder Model for Causal tasks</h1>
+
 
 <p align="center">
   <img alt="Python" src="https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11-blue">
@@ -66,7 +66,7 @@ hf-encoder \
 --max_epochs 10
 ```
 
-There are other arguments such as `--filter_num_sent`, `--filter_num_causal`, and `--evaluate_by_word` (for OpenAI models).<br>
+There are other arguments such as `--filter_num_sent`, `--filter_num_causal`, `--filter_plicit_type`, and `--evaluate_by_word` (for OpenAI models).<br>
 Please see details using `--help` flag.
 
 ## Data Preprocessing

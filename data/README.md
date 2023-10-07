@@ -14,3 +14,6 @@ Download dev/test/train.json files from [ReCo/data/english](https://github.com/W
 ## FinCausal (Task1&2)
 Download fnp-2020-<fincausal/fincausal2>-task<1/2>.csv files from [YseopLab/FNP_2020_FinCausal/data](https://github.com/yseop/YseopLab/tree/develop/FNP_2020_FinCausal/data).<br>
 After download, save these csv files in `./data` (like `./data/fnp2020-fincausal2-task2.csv`).
+
+## Japanese Datasets
+Japanese datasets are not publicly available now.
