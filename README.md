@@ -120,6 +120,21 @@ In these datasets, causal relations present within a single sentence or spanning
 In addition to datasets labeled for the presence or absence of causality in sentences, another dataset from JFS is annotated for cause and effect spans by an investor with 15 years of experience.
 From examining 30 files in the latter dataset, 478 causal relations are identified.
 
+Dataset details in terms of abbreviation (Abbr.), size (Size), sequences with and without causality (Pos:Neg), linguistic indicators of causal relations (Linguistic), treatment of inter-sentential causality (Inter-sent), and the length of causal arguments annotated (Arguments):
+
+| Datasets | Abbr. | Size | Pos:Neg | Linguistic | Inter-sent | Arguments |
+|---|---|---|---|---|---|---|
+| AltLex | AltLex | 978 | 415:563 | AltLex | No | - |
+| BECauSE V2.0 | BECauSE | 954 | 761:193 | Explicit | No | Phrases |
+| Causal-TimeBank | CTB | 2201 | 276:1925 | Explicit | Yes | Words |
+| EventStoryLine | ESL | 2232 | 1156:1076 | All | Yes | Words |
+| Penn Discourse Treebank V3.0 | PDTB | 42850 | 11064:31786 | All | Yes | Clauses |
+| SemEval-2010 Task8 | SemEval | 10690 | 1327:9363 | All | No | Phrases |
+| FinCausal 2020 | FinCausal | 21325 | 1547:19778 | All | Yes | Clauses |
+| Japanese financial statement summaries | JFS | 1958 | 1429:529 | Explicit | Yes | Clauses |
+| Nikkei news articles | Nikkei | 2045 | 898:1147 | Explicit | Yes | Clauses |
+
+
 ## Number of Examples
 
 For sequence classification and span detection:
