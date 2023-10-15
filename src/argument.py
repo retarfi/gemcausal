@@ -68,12 +68,12 @@ def add_argument_hf_encoder(parser: ArgumentParser) -> None:
 
 
 def add_argument_openai(parser: ArgumentParser) -> None:
-    parser.add_argument("--model", choices=["gpt-3.5-turbo", "gpt-4"], required=True)
+    parser.add_argument("--model", choices=["gpt-3.5-turbo", "gpt-3.5-turbo-16k", "gpt-4"], required=True)
     parser.add_argument(
         "--template", help="Json path of prompt template", required=True
     )
     parser.add_argument(
-        "--shot", help="Number of shots", choices=[0, 1, 2, 3], required=True, type=int
+        "--shot", help="Number of shots", choices=[0, 3, 5, 10, 30, 50], required=True, type=int
     )
     parser.add_argument(
         "--evaluate_by_word",
