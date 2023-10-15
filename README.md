@@ -16,7 +16,7 @@
 
 |      Task \ Domain      | <div style="text-align: center;">General</div>                                                                                                                                                                                                                                                                                                                                                                                                                                                 |                                      Financial                                      | Financial & Multilingual (Japanese) |
 | :---------------------: | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------: | :---------------------------------: |
-| Causal Sequence Classification | 6 datasets from [UniCausal](https://github.com/tanfiona/UniCausal):<br><ul><li>[AltLex](https://github.com/chridey/altlex)</li><li>[BECauSE V2.0](https://github.com/duncanka/BECAUSE/tree/2.0)</li><li>[Causal-TimeBank](https://github.com/paramitamirza/Causal-TimeBank)</li><li>[EventStoryLine](https://github.com/tommasoc80/EventStoryLine)</li><li>[Penn Discourse Treebank V3.0](https://catalog.ldc.upenn.edu/LDC2019T05)</li><li>[SemEval-2010 Task8](https://semeval2.fbk.eu/semeval2.php?location=tasks&taskid=11)</li> | <li>[FinCausal 2020](https://github.com/yseop/YseopLab/tree/develop/FNP_2020_FinCausal)</li> | <li style="text-align: left;">Japanese financial statement summaries (Not publicly available, [paper in Japanese](https://www.anlp.jp/proceedings/annual_meeting/2023/pdf_dir/D11-3.pdf))</li> <li style="text-align: left;">Nikkei news articles(Not publicly available, [paper](https://doi.org/10.1109/SSCI.2017.8285265))</li> |
+| Causal Sequence Classification | 6 datasets from [UniCausal](https://github.com/tanfiona/UniCausal):<br><ul><li>[AltLex](https://github.com/chridey/altlex)</li><li>[BECauSE V2.0](https://github.com/duncanka/BECAUSE/tree/2.0)</li><li>[Causal-TimeBank](https://github.com/paramitamirza/Causal-TimeBank)</li><li>[EventStoryLine](https://github.com/tommasoc80/EventStoryLine)</li><li>[Penn Discourse Treebank V3.0](https://catalog.ldc.upenn.edu/LDC2019T05)</li><li>[SemEval-2010 Task8](https://semeval2.fbk.eu/semeval2.php?location=tasks&taskid=11)</li> | <li>[FinCausal 2020](https://github.com/yseop/YseopLab/tree/develop/FNP_2020_FinCausal)</li> | <li style="text-align: left;">Japanese financial statement summaries (Not publicly available, [paper in Japanese](https://www.anlp.jp/proceedings/annual_meeting/2023/pdf_dir/D11-3.pdf))</li> <li style="text-align: left;">Nikkei news articles (Not publicly available, [paper](https://doi.org/10.1109/SSCI.2017.8285265))</li> |
 |     Causal Span Detection      | 3 datasets from [UniCausal](https://github.com/tanfiona/UniCausal):<br><ul><li>[AltLex](https://github.com/chridey/altlex)</li><li>[BECauSE V2.0](https://github.com/duncanka/BECAUSE/tree/2.0)</li><li>[Penn Discourse Treebank V3.0](https://catalog.ldc.upenn.edu/LDC2019T05)</li>                                                                                                                                                                                                                                                                           | <li>[FinCausal 2020](https://github.com/yseop/YseopLab/tree/develop/FNP_2020_FinCausal)</li> |  <li>Japanese financial statement summaries (Not publicly available, [paper](https://doi.org/10.1109/SSCI.2017.8285265))</li>               |
 |  Causal Chain Classification   |<li>[ReCo](https://github.com/waste-wood/reco)</li>                                                                                                                                                                                                                                                                                                                                                                                                       |                                         TBA                                         |                 TBA                 |
 
@@ -76,6 +76,20 @@ For download and preprocess information, see [data/README.md](data/README.md)
 
 
 ## Datasets Datails
+Dataset details in terms of abbreviation (Abbr.), size (Size), sequences with and without causality (Pos:Neg), linguistic indicators of causal relations (Linguistic), treatment of inter-sentential causality (Inter-sent), and the length of causal arguments annotated (Arguments):
+
+| Datasets | Abbr. | Size | Pos:Neg | Linguistic | Inter-sent | Arguments |
+|---|---|---|---|---|---|---|
+| AltLex | AltLex | 978 | 415:563 | AltLex | No | - |
+| BECauSE V2.0 | BECauSE | 954 | 761:193 | Explicit | No | Phrases |
+| Causal-TimeBank | CTB | 2201 | 276:1925 | Explicit | Yes | Words |
+| EventStoryLine | ESL | 2232 | 1156:1076 | All | Yes | Words |
+| Penn Discourse Treebank V3.0 | PDTB | 42850 | 11064:31786 | All | Yes | Clauses |
+| SemEval-2010 Task8 | SemEval | 10690 | 1327:9363 | All | No | Phrases |
+| FinCausal 2020 | FinCausal | 21325 | 1547:19778 | All | Yes | Clauses |
+| Japanese financial statement summaries | JFS | 1958 | 1429:529 | Explicit | Yes | Clauses |
+| Nikkei news articles | Nikkei | 2045 | 898:1147 | Explicit | Yes | Clauses |
+
 ### AltLex
 AltLex ([Hidey and McKeown, 2016](http://dx.doi.org/10.18653/v1/P16-1135)) investigates causal relations in English Wikipedia articles, focusing on alternative lexicalization connectives (AltLex) within a single sentence. 
 These AltLex connectives appear in a broader range of linguistic forms compared to explicit markers, exemplified by phrases such as "This may help explain why" and "This activity produced." 
@@ -120,21 +134,6 @@ Nikkei refers to a financial newspaper published by Nikkei, Inc.
 In these datasets, causal relations present within a single sentence or spanning two adjacent sentences are analyzed, employing explicit markers automatically generated through the bootstrapping method.
 In addition to datasets labeled for the presence or absence of causality in sentences, another dataset from JFS is annotated for cause and effect spans by an investor with 15 years of experience.
 From examining 30 files in the latter dataset, 478 causal relations are identified.
-
-Dataset details in terms of abbreviation (Abbr.), size (Size), sequences with and without causality (Pos:Neg), linguistic indicators of causal relations (Linguistic), treatment of inter-sentential causality (Inter-sent), and the length of causal arguments annotated (Arguments):
-
-| Datasets | Abbr. | Size | Pos:Neg | Linguistic | Inter-sent | Arguments |
-|---|---|---|---|---|---|---|
-| AltLex | AltLex | 978 | 415:563 | AltLex | No | - |
-| BECauSE V2.0 | BECauSE | 954 | 761:193 | Explicit | No | Phrases |
-| Causal-TimeBank | CTB | 2201 | 276:1925 | Explicit | Yes | Words |
-| EventStoryLine | ESL | 2232 | 1156:1076 | All | Yes | Words |
-| Penn Discourse Treebank V3.0 | PDTB | 42850 | 11064:31786 | All | Yes | Clauses |
-| SemEval-2010 Task8 | SemEval | 10690 | 1327:9363 | All | No | Phrases |
-| FinCausal 2020 | FinCausal | 21325 | 1547:19778 | All | Yes | Clauses |
-| Japanese financial statement summaries | JFS | 1958 | 1429:529 | Explicit | Yes | Clauses |
-| Nikkei news articles | Nikkei | 2045 | 898:1147 | Explicit | Yes | Clauses |
-
 
 ## Number of Examples
 
