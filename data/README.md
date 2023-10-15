@@ -2,6 +2,14 @@
 ## AltLex, CTB, ESL, SemEval
 Download csv files from [UniCausal/data/splits/](https://github.com/tanfiona/UniCausal/tree/main/data/splits) and save them in `data/`.
 
+## BECauSE
+Download files from [BECAUSE v2.0 Data Release](https://github.com/duncanka/BECAUSE/tree/2.0).<br>
+The BECAuSE dataset is divided into four sub-corpora. For Penn Treebank (PTB) and the New York Times Annotated Corpus (NYT), download from [LDC](https://catalog.ldc.upenn.edu/LDC99T42) or somewhere (you may pay or use membership).[<sup>1</sup>]<br>
+After download, process the data with [UniCausal/processing/Get BECAUSE.ipynb](https://github.com/tanfiona/UniCausal/blob/main/processing/Get%20BECAUSE.ipynb).<br>
+The output `because.csv` is placed in `data/`.
+
+<a name="note1"></a>
+<sup>1</sup> Note that we were not able to obtain the raw NYT files that require subscriptions. Therefore, we experimented with the other three corpora in this study.
 
 ## PDTB
 Download from [LDC](https://catalog.ldc.upenn.edu/LDC2019T05) or somewhere (you may pay or use membership).<br>

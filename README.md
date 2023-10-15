@@ -1,5 +1,5 @@
 
-<h1 align="center">GemCausal: Generator or Encoder Model for Causal tasks</h1>
+<h1 align="center">GemCausal: Generator or Encoder Model for Causal text mining tasks</h1>
 
 
 <p align="center">
@@ -16,9 +16,10 @@
 
 |      Task \ Domain      | <div style="text-align: center;">General</div>                                                                                                                                                                                                                                                                                                                                                                                                                                                 |                                      Financial                                      | Financial & Multilingual (Japanese) |
 | :---------------------: | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------: | :---------------------------------: |
-| Sequence Classification | 5 tasks from [UniCausal](https://github.com/tanfiona/UniCausal):<br><ul><li>[AltLex](https://github.com/chridey/altlex)</li><li>[BECAUSE v2.0](https://github.com/duncanka/BECAUSE/tree/2.0)</li><li>[CTB (CausalTimeBank)](https://github.com/paramitamirza/Causal-TimeBank)</li><li>[ESL (EventStoryLine V1.0)](https://github.com/tommasoc80/EventStoryLine)</li><li>[PDTB (Penn Discourse Treebank V3.0)](https://catalog.ldc.upenn.edu/LDC2019T05)</li><li>[SemEval (SemEval 2010 Task 8)](https://semeval2.fbk.eu/semeval2.php?location=tasks&taskid=11)</li> | [FinCausal 2020](https://github.com/yseop/YseopLab/tree/develop/FNP_2020_FinCausal) |                 Financial Results & Nikkei News (Not publicly available, [paper in Japanese](https://www.anlp.jp/proceedings/annual_meeting/2023/pdf_dir/D11-3.pdf))                 |
-|     Span Detection      | 2 tasks from [UniCausal](https://github.com/tanfiona/UniCausal):<br><ul><li>[AltLex](https://github.com/chridey/altlex)</li><li>[BECAUSE v2.0](https://github.com/duncanka/BECAUSE/tree/2.0)</li><li>[PDTB (Penn Discourse Treebank V3.0)](https://catalog.ldc.upenn.edu/LDC2019T05)</li>                                                                                                                                                                                                                                                                           | [FinCausal 2020](https://github.com/yseop/YseopLab/tree/develop/FNP_2020_FinCausal) |                 Financial Results (Not publicly available, [paper in Japanese](https://search.ieice.org/bin/summary.php?id=j98-d_5_811))                 |
-|  Chain Classification   | <div style="text-align: center;">[ReCo](https://github.com/waste-wood/reco)</div>                                                                                                                                                                                                                                                                                                                                                                                                              |                                         TBA                                         |                 TBA                 |
+| Causal Sequence Classification | 6 datasets from [UniCausal](https://github.com/tanfiona/UniCausal):<br><ul><li>[AltLex](https://github.com/chridey/altlex)</li><li>[BECauSE V2.0](https://github.com/duncanka/BECAUSE/tree/2.0)</li><li>[Causal-TimeBank](https://github.com/paramitamirza/Causal-TimeBank)</li><li>[EventStoryLine](https://github.com/tommasoc80/EventStoryLine)</li><li>[Penn Discourse Treebank V3.0](https://catalog.ldc.upenn.edu/LDC2019T05)</li><li>[SemEval-2010 Task8](https://semeval2.fbk.eu/semeval2.php?location=tasks&taskid=11)</li> | <li>[FinCausal 2020](https://github.com/yseop/YseopLab/tree/develop/FNP_2020_FinCausal)</li> | <li style="text-align: left;">Japanese financial statement summaries (Not publicly available, [paper in Japanese](https://www.anlp.jp/proceedings/annual_meeting/2023/pdf_dir/D11-3.pdf))</li> <li style="text-align: left;">Nikkei news articles(Not publicly available, [paper](https://doi.org/10.1109/SSCI.2017.8285265))</li> |
+|     Causal Span Detection      | 3 datasets from [UniCausal](https://github.com/tanfiona/UniCausal):<br><ul><li>[AltLex](https://github.com/chridey/altlex)</li><li>[BECauSE V2.0](https://github.com/duncanka/BECAUSE/tree/2.0)</li><li>[Penn Discourse Treebank V3.0](https://catalog.ldc.upenn.edu/LDC2019T05)</li>                                                                                                                                                                                                                                                                           | <li>[FinCausal 2020](https://github.com/yseop/YseopLab/tree/develop/FNP_2020_FinCausal)</li> |  <li>Japanese financial statement summaries (Not publicly available, [paper](https://doi.org/10.1109/SSCI.2017.8285265))</li>               |
+|  Causal Chain Classification   |<li>[ReCo](https://github.com/waste-wood/reco)</li>                                                                                                                                                                                                                                                                                                                                                                                                       |                                         TBA                                         |                 TBA                 |
+
 
 ## Quick Start
 
@@ -40,7 +41,7 @@ When using OpenAI API:
 OPENAI_API_KEY=XXX poetry run python main.py \
 openai \
 --task_type <sequence_classification|span_detection|chain_classification> \
---dataset_type <altlex|ctb|esl|fincausal|pdtb|reco|semeval> \
+--dataset_type <altlex|because|ctb|esl|fincausal|jpfinresults|jpnikkei|pdtb|reco|semeval> \
 --data_dir data/ \
 --test_samples 200 \
 --output_dir materials/result/ \
@@ -55,7 +56,7 @@ When using a HuggingFace encoder model:
 poetry run python main.py \
 hf-encoder \
 --task_type <sequence_classification|span_detection|chain_classification> \
---dataset_type <altlex|ctb|esl|fincausal|pdtb|reco|semeval> \
+--dataset_type <altlex|because|ctb|esl|fincausal|jpfinresults|jpnikkei|pdtb|reco|semeval> \
 --data_dir data/ \
 --test_samples 200 \
 --output_dir materials/result/ \
@@ -161,18 +162,18 @@ For sequence classification and span detection:
       <td style="text-align: center;">462</td>
       <td style="text-align: center;">115</td>
       <td style="text-align: center;">401</td>
-      <td style="text-align: center;">221</td>
-      <td style="text-align: center;">55</td>
-      <td style="text-align: center;">100</td>
+      <td style="text-align: center;">252</td>
+      <td style="text-align: center;">63</td>
+      <td style="text-align: center;">111</td>
     </tr>
     <tr>
-      <td style="text-align: center;">BECAUSE</td>
+      <td style="text-align: center;">BECauSE</td>
       <td style="text-align: center;">852</td>
       <td style="text-align: center;">51</td>
       <td style="text-align: center;">51</td>
-      <td style="text-align: center;">475</td>
-      <td style="text-align: center;">33</td>
-      <td style="text-align: center;">33</td>
+      <td style="text-align: center;">879</td>
+      <td style="text-align: center;">40</td>
+      <td style="text-align: center;">40</td>
     </tr>
     <tr>
       <td style="text-align: center;">CTB</td>
@@ -193,28 +194,46 @@ For sequence classification and span detection:
       <td style="text-align: center;">-</td>
     </tr>
     <tr>
-      <td style="text-align: center;">FinCausal</td>
-      <td style="text-align: center;">17060</td>
-      <td style="text-align: center;">2133</td>
-      <td style="text-align: center;">2133</td>
-      <td style="text-align: center;">1087</td>
-      <td style="text-align: center;">136</td>
-      <td style="text-align: center;">136</td>
-    </tr>
-    <tr>
       <td style="text-align: center;">PDTB</td>
       <td style="text-align: center;">26684</td>
       <td style="text-align: center;">8083</td>
       <td style="text-align: center;">8083</td>
-      <td style="text-align: center;">4694</td>
-      <td style="text-align: center;">1300</td>
-      <td style="text-align: center;">1300</td>
+      <td style="text-align: center;">7913</td>
+      <td style="text-align: center;">2001</td>
+      <td style="text-align: center;">2001</td>
     </tr>
     <tr>
       <td style="text-align: center;">SemEval</td>
       <td style="text-align: center;">6380</td>
       <td style="text-align: center;">1595</td>
       <td style="text-align: center;">2715</td>
+      <td style="text-align: center;">-</td>
+      <td style="text-align: center;">-</td>
+      <td style="text-align: center;">-</td>
+    </tr>
+    <tr>
+      <td style="text-align: center;">FinCausal</td>
+      <td style="text-align: center;">17060</td>
+      <td style="text-align: center;">2132</td>
+      <td style="text-align: center;">2133</td>
+      <td style="text-align: center;">1087</td>
+      <td style="text-align: center;">136</td>
+      <td style="text-align: center;">136</td>
+    </tr>
+    <tr>
+      <td style="text-align: center;">JFS</td>
+      <td style="text-align: center;">1565</td>
+      <td style="text-align: center;">196</td>
+      <td style="text-align: center;">196</td>
+      <td style="text-align: center;">233</td>
+      <td style="text-align: center;">34</td>
+      <td style="text-align: center;">69</td>
+    </tr>
+    <tr>
+      <td style="text-align: center;">Nikkei</td>
+      <td style="text-align: center;">1635</td>
+      <td style="text-align: center;">204</td>
+      <td style="text-align: center;">205</td>
       <td style="text-align: center;">-</td>
       <td style="text-align: center;">-</td>
       <td style="text-align: center;">-</td>
