@@ -73,6 +73,53 @@ Please see details using `--help` flag.
 
 For download and preprocess information, see [data/README.md](data/README.md)
 
+
+## Datasets Datails
+### AltLex
+AltLex ([Hidey and McKeown, 2016](http://dx.doi.org/10.18653/v1/P16-1135)) investigates causal relations in English Wikipedia articles, focusing on alternative lexicalization connectives (AltLex) within a single sentence. 
+These AltLex connectives appear in a broader range of linguistic forms compared to explicit markers, exemplified by phrases such as "This may help explain why" and "This activity produced." 
+However, one limitation of this dataset is its assumption that all words preceding and succeeding the causal cues are the sole spans corresponding to the cause and effect intended for extraction.
+
+### BECauSE V2.0 (BECauSE)
+BECauSE V2.0 (BECauSE) ([Dunietz et al., 2017](http://dx.doi.org/10.18653/v1/W17-0812)) is designed to annotate intra-sentential explicit causal relations, aiming to encapsulate the diverse constructions utilized to convey cause and effect. 
+The arguments directed to causal relation instances are phrase units.
+The dataset is derived from several sources, namely the New York Times Annotated Corpus (NYT) ([Sandhaus, 2008](https://doi.org/10.35111/77ba-9x74)), Penn Treebank (PTB) ([Marcus et al., 1994](https://doi.org/10.3115/1075812.1075835)), Congressional Hearings of the 2014 NLP Unshared Task in PoliInformatics (CHRG) ([Smith et al., 2014](http://dx.doi.org/10.3115/v1/W14-2505)), and the Manually Annotated Sub-Corpus (MASC) ([Ide et al., 2010](https://doi.org/10.35111/ctg7-5698)).
+
+### Causal-TimeBank (CTB) and EventStoryLine (ESL)
+Causal-TimeBank (CTB) ([Mirza et al., 2014](http://dx.doi.org/10.3115/v1/W14-0702);[ Mirza and Tonelli, 2014](https://aclanthology.org/C14-1198)) and EventStoryLine (ESL) ([Caselli and Vossen, 2016](http://dx.doi.org/10.18653/v1/W16-5708),[ 2017](http://dx.doi.org/10.18653/v1/W17-2711)) datasets are widely recognized in the field of Event Causality Identification (ECI), which concentrates on discerning causal links between events within textual data.
+For instance, the ECI model identifies a causal link between "earthquake" and  "tsunami" in the sentence "The earthquake generated a tsunami."
+The CTB dataset originates from the TimeBank corpus of the TempEval-3 task ([UzZaman et al., 2013](https://aclanthology.org/S13-2001)) and is designed to annotate solely explicit causal relations via a rule-driven algorithm. 
+In contrast, ESL derives from an extended version of the EventCorefBank (ECB+) ([Cybulska and Vossen, 2014](https://aclanthology.org/L14-1646/)) and encompasses explicit and implicit causality.
+Both datasets address intra-sentential as well as inter-sentential causality.
+However, a limitation is evident in that only the initial words of an event are tagged, leading to the omission of the context from the extracted arguments.
+
+### Penn Discourse Treebank V3.0 (PDTB)
+Penn Discourse Treebank V3.0 (PDTB) ([Prasad et al., 2019](https://doi.org/10.35111/qebf-gk47)) represents the third installment of the Penn Discourse Treebank project and stands as the most extensive annotated corpus dedicated to discourse relations.
+This project primarily focuses on annotating discourse relations present in the Wall Street Journal (WSJ) segment of Treebank-2.
+The uniqueness of PDTB lies in its ability to annotate not only overt discourse relations with explicit connectives but also those that are conveyed through varied forms containing inter-sentential and implicit causality.
+It is pertinent to note that causal relations within clauses are excluded from annotation.
+Although causal relation is not the main focus of the dataset, one of the relations annotated by PDTB is treated as causality in our study.
+
+### SemEval-2010 Task8 (SemEval)
+In the SemEval-2010 Task8 (SemEval) ([Hendrickx et al., 2010](https://aclanthology.org/S10-1006)), the primary emphasis is not causal relations but the multi-faceted classification of semantic relations between noun phrase pairs.
+The dataset restricts relation instances to those present within a single sentence; however, they are not restricted to merely explicit instances.
+In the nine relations defined by SemEval, we treat the "Cause-Effect (CE)" relation as a causal relation.
+We select the six datasets mentioned above based on the previous study related to causal text mining ([Tan et al., 2023](https://doi.org/10.1007/978-3-031-39831-5_23)).
+
+### FinCausal 2020 (FinCausal)
+FinCausal 2020 (FinCausal) ([Mariko et al., 2020](https://aclanthology.org/2020.fnp-1.3)) dataset, extracted from financial news articles published in 2019 by Quam and additional data from the EDGAR Database of the U.S. Securities and Exchange Commission (SEC), belongs to the financial domain.
+This dataset is made for the FinCausal-2020 Shared Task on "Financial Document Causality Detection," which aims to develop the ability to use external information to explain why changes in market and corporate financial conditions occur.
+Key features of the FinCausal 2020 dataset are its restriction of effect spans to quantifiable facts and the common occurrence of causal arguments being presented as entire sentences.
+The dataset is also annotated for implicit and inter-sentential causality.
+
+### Japanese financial statement summaries (JFS) and Nikkei news articles (Nikkei)
+Our study also employs Japanese datasets sourced from Japanese financial statement summaries (JFS) and Nikkei news articles (Nikkei) ([Sakaji et al., 2017](https://doi.org/10.1109/SSCI.2017.8285265);[ Kobayashi et al., 2023](https://www.anlp.jp/proceedings/annual_meeting/2023/pdf_dir/D11-3.pdf)).
+JFS are mandated disclosure documents for publicly listed companies, providing details on business performance and financial condition, typically characterized by specialized and standardized phrasing.
+Nikkei refers to a financial newspaper published by Nikkei, Inc.
+In these datasets, causal relations present within a single sentence or spanning two adjacent sentences are analyzed, employing explicit markers automatically generated through the bootstrapping method.
+In addition to datasets labeled for the presence or absence of causality in sentences, another dataset from JFS is annotated for cause and effect spans by an investor with 15 years of experience.
+From examining 30 files in the latter dataset, 478 causal relations are identified.
+
 ## Number of Examples
 
 For sequence classification and span detection:
