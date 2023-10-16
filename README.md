@@ -131,7 +131,7 @@ The dataset is also annotated for implicit and inter-sentential causality.
 Our study also employs Japanese datasets sourced from Japanese financial statement summaries (JFS) and Nikkei news articles (Nikkei) ([Sakaji et al., 2017](https://doi.org/10.1109/SSCI.2017.8285265);[ Kobayashi et al., 2023](https://www.anlp.jp/proceedings/annual_meeting/2023/pdf_dir/D11-3.pdf)).
 JFS are mandated disclosure documents for publicly listed companies, providing details on business performance and financial condition, typically characterized by specialized and standardized phrasing.
 Nikkei refers to a financial newspaper published by Nikkei, Inc.
-In these datasets, causal relations present within a single sentence or spanning two adjacent sentences are analyzed, employing explicit markers automatically generated through the bootstrapping method.
+These datasets analyze causal relations present within a single sentence or spanning two adjacent sentences using explicit markers derived from hand-labeling tags on 300 newspaper articles focused on economic trends.
 In addition to datasets labeled for the presence or absence of causality in sentences, another dataset from JFS is annotated for cause and effect spans by an investor with 15 years of experience.
 From examining 30 files in the latter dataset, 478 causal relations are identified.
 
