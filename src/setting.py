@@ -17,6 +17,7 @@ DatasetType: EnumMeta = Enum(
         "pdtb",
         "reco",
         "semeval",
+        "all",
     ),
 )
 TaskType: EnumMeta = Enum(
@@ -43,6 +44,7 @@ DatasetTaskPairs: tuple[tuple[Enum, tuple[Enum]]] = (
     (DatasetType.pdtb, (TaskType.sequence_classification, TaskType.span_detection)),
     (DatasetType.reco, (TaskType.chain_classification,)),
     (DatasetType.semeval, (TaskType.sequence_classification,)),
+    (DatasetType.all, (TaskType.sequence_classification, TaskType.span_detection)),
 )
 
 
