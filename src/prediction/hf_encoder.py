@@ -177,6 +177,12 @@ def predict(args: Namespace) -> None:
     task_enum: Enum = TaskType[task_type]
     dataset_type: str = args.dataset_type
     dataset_enum: Enum = DatasetType[dataset_type]
+    test_dataset_type: Optional[str] = args.test_dataset_type
+    test_dataset_enum: Enum
+    if test_dataset_type is None:
+        test_dataset_enum = dataset_enum
+    else:
+        test_dataset_enum = DatasetType[test_dataset_type]
     seed: int = args.seed
     model_name: str = args.model_name
     tokenizer_name: str = (
@@ -195,6 +201,7 @@ def predict(args: Namespace) -> None:
     dsd: DatasetDict = load_data(
         task_enum=task_enum,
         dataset_enum=dataset_enum,
+        test_dataset_enum=test_dataset_enum,
         sentencetype_enum=SentenceType[filter_num_sent],
         numcausal_enum=NumCausalType[filter_num_causal],
         plicit_enum=PlicitType[filter_plicit_type],
@@ -330,7 +337,8 @@ def predict(args: Namespace) -> None:
     logger.info("Best result: %s", best_result)
 
     filehead: str = (
-        datetime.datetime.now().strftime("%Y%m%d_%H%M_") + f"{task_type}_{dataset_type}"
+        datetime.datetime.now().strftime("%Y%m%d_%H%M_")
+        + f"{task_type}_{dataset_type}_{test_dataset_type}"
     )
     if (
         filter_num_sent == "all"
@@ -345,7 +353,7 @@ def predict(args: Namespace) -> None:
             filehead += f"_{filter_num_causal}"
         if filter_plicit_type != "all":
             filehead += f"_{filter_plicit_type}"
-    filehead += "_hf-encoder"
+    filehead += f"_hf-encoder_{seed}"
 
     result: list[str, Union[list[str], str]] = {
         **best_result,

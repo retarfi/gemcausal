@@ -14,6 +14,12 @@ def add_argument_common(parser: ArgumentParser) -> None:
         required=True,
         type=str.lower,
     )
+    parser.add_argument(
+        "--test_dataset_type",
+        choices=[x.name for x in DatasetType],
+        type=str.lower,
+        help="If not specified, use the same dataset type as the training dataset",
+    )
     parser.add_argument("--data_dir", required=True, default="data/")
     parser.add_argument(
         "--test_samples",
@@ -79,7 +85,7 @@ def add_argument_openai(parser: ArgumentParser) -> None:
     parser.add_argument(
         "--shot",
         help="Number of shots",
-        choices=[0, 3, 5, 10, 30, 50],
+        choices=[0, 1, 3, 5, 10, 30, 50],
         required=True,
         type=int,
     )
