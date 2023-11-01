@@ -178,10 +178,11 @@ def predict(args: Namespace) -> None:
     dataset_type: str = args.dataset_type
     dataset_enum: Enum = DatasetType[dataset_type]
     test_dataset_type: Optional[str] = args.test_dataset_type
+    test_dataset_enum: Enum
     if test_dataset_type is None:
-        test_dataset_enum: Optional[Enum] = dataset_enum
+        test_dataset_enum = dataset_enum
     else:
-        test_dataset_enum: Optional[Enum] = DatasetType[test_dataset_type]
+        test_dataset_enum = DatasetType[test_dataset_type]
     seed: int = args.seed
     model_name: str = args.model_name
     tokenizer_name: str = (

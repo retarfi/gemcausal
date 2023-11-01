@@ -61,6 +61,9 @@ def load_dataset_for_corpus(
         DatasetType.pdtb,
         DatasetType.semeval,
     ):
+        ds_train: Dataset
+        ds_valid: Dataset
+        ds_test: Dataset
         ds_train, ds_valid, ds_test = load_data_unicausal(
             dataset_enum,
             task_enum,
@@ -83,7 +86,7 @@ def load_dataset_for_corpus(
         )
 
     elif dataset_enum == DatasetType.reco:
-        reco_dir = os.path.join(data_dir, "reco")
+        reco_dir: str = os.path.join(data_dir, "reco")
         assert os.path.isdir(reco_dir), f"{reco_dir} for ReCo data does not exist"
         ds_train = load_reco_dataset(os.path.join(reco_dir, "train.json"))
         ds_valid = load_reco_dataset(os.path.join(reco_dir, "dev.json"))
@@ -102,7 +105,7 @@ def load_dataset_for_corpus(
             ]
         elif task_enum == TaskType.span_detection:
             train_dataset_list = ["altlex", "because", "pdtb", "fincausal"]
-        else:
+        else:  # pragma: no cover
             raise NotImplementedError()
 
         train_datasets, valid_datasets, test_datasets = [], [], []
@@ -131,7 +134,7 @@ def load_dataset_for_corpus(
             [_convert_example_ids(ds) for ds in test_datasets]
         ).shuffle(seed=seed)
 
-    else:
+    else:  # pragma: no cover
         raise NotImplementedError()
 
     return _remove_unnecessary_columns(ds_train, ds_valid, ds_test, set_columns)
