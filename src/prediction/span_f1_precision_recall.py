@@ -45,8 +45,8 @@ class Span(evaluate.Metric):
         for label in score_labels:
             pred: list[int] = [i for i, x in enumerate(predictions) if x == label]
             ref: list[int] = [i for i, x in enumerate(references) if x == label]
-            prec: float = len(set(pred) & set(ref)) / len(pred)
-            rec: float = len(set(pred) & set(ref)) / len(ref)
+            prec: float = len(set(pred) & set(ref)) / len(pred) if len(pred) != 0 else 0.0
+            rec: float = len(set(pred) & set(ref)) / len(ref) if len(ref) != 0 else 0.0
             f1: float = 2 * prec * rec / (prec + rec) if (prec + rec) != 0.0 else 0.0
             lst_scores.append(score(f1=f1, recall=rec, precision=prec))
         return {
